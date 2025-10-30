@@ -177,6 +177,7 @@ function callOpenAI_(systemPrompt: string, userText: string): CallOpenAIResult |
       contentType: 'application/json',
       headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}` },
       payload: JSON.stringify(payload),
+      deadline: 30, // Set a 30-second timeout for the API call
       muteHttpExceptions: true,
     };
 
@@ -185,8 +186,13 @@ function callOpenAI_(systemPrompt: string, userText: string): CallOpenAIResult |
     const httpContent = httpResponse.getContentText();
 
     if (httpCode !== 200) {
-      log_('ERROR', 'callOpenAI_', { httpCode, httpContent });
-      return { ok: false, error: `OpenAI API Error ${httpCode}: ${httpContent.slice(0, 500)}` };
+      let errorMsg = `OpenAI API Error (${httpCode})`;
+      try {
+        const errorPayload = JSON.parse(httpContent);
+        errorMsg = errorPayload?.error?.message || httpContent;
+      } catch (e) { /* Ignore if response is not JSON */ }
+      log_('ERROR', 'callOpenAI_http_error', { httpCode, errorMsg });
+      return { ok: false, error: errorMsg };
     }
 
     try {
@@ -195,12 +201,11 @@ function callOpenAI_(systemPrompt: string, userText: string): CallOpenAIResult |
       if (responseText) {
         return { ok: true, response: responseText };
       }
-      // Handle cases where the response structure is valid but content is missing
-      log_('ERROR', 'callOpenAI_response_malformed', { httpContent });
+      log_('WARN', 'callOpenAI_response_malformed', { httpContent });
       return { ok: false, error: 'OpenAI response was valid JSON but missing expected content.' };
     } catch (jsonError) {
       // This is critical for debugging if OpenAI returns non-JSON text
-      log_('ERROR', 'callOpenAI_json_parse_error', { error: (jsonError as Error).message, rawResponse: httpContent });
+      log_('ERROR', 'callOpenAI_json_parse_error', { err: (jsonError as Error).message, rawResponse: httpContent });
       return { ok: false, error: 'Failed to parse OpenAI response as JSON.' };
     }
   } catch (e) {

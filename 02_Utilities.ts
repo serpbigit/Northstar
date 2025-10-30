@@ -191,12 +191,22 @@ function callOpenAI_(systemPrompt: string, userText: string): CallOpenAIResult |
       return { ok: false, error: `OpenAI API Error ${httpCode}: ${httpContent.slice(0, 500)}` };
     }
 
-    const json = JSON.parse(httpContent);
-    const responseText = json.choices[0].message.content.trim();
-
-    return { ok: true, response: responseText };
+    try {
+      const json = JSON.parse(httpContent);
+      const responseText = json.choices[0]?.message?.content?.trim();
+      if (responseText) {
+        return { ok: true, response: responseText };
+      }
+      // Handle cases where the response structure is valid but content is missing
+      log_('ERROR', 'callOpenAI_response_malformed', { httpContent });
+      return { ok: false, error: 'OpenAI response was valid JSON but missing expected content.' };
+    } catch (jsonError) {
+      // This is critical for debugging if OpenAI returns non-JSON text
+      log_('ERROR', 'callOpenAI_json_parse_error', { error: (jsonError as Error).message, rawResponse: httpContent });
+      return { ok: false, error: 'Failed to parse OpenAI response as JSON.' };
+    }
   } catch (e) {
-    log_('ERROR', 'callOpenAI_', { err: (e as Error).message });
-    return { ok: false, error: (e as Error).message };
+    log_('ERROR', 'callOpenAI_fetch_error', { error: (e as Error).message, stack: (e as Error).stack });
+    return { ok: false, error: `API ERROR: Failed to get response from OpenAI. Details: ${(e as Error).message}` };
   }
 }

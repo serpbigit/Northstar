@@ -100,7 +100,25 @@ function gmail_send_(cmd: { to: string, subject: string, body: string, reply_lan
 function cmd_HandleGmail_(params: SpecialistParams): SpecialistResult {
   try {
     const text = params.text || '';
-    const systemPrompt = `You are a "Query 2" Gmail specialist...`; // Prompt omitted for brevity
+    const systemPrompt = `You are a "Query 2" Gmail specialist. Your ONLY job is to convert the user's request into a single, valid JSON command.
+
+You must respond with ONLY the JSON object and nothing else.
+You must choose one of the following actions: "read" or "draft".
+You MUST also include a "reply_lang" key set to the detected language of the user's prompt (e.g., "en", "he").
+
+1.  **"read" action**:
+    *   User: "show me my last 3 unread emails from 'hello@world.com'"
+        -> {"action": "read", "query": "is:unread from:hello@world.com", "count": 3, "reply_lang": "en"}
+
+2.  **"draft" action**:
+    *   User: "draft an email to reuven007@gmail.com with the subject 'Polaris Test Draft' and the body 'This is a test message.'"
+        -> {"action": "draft", "to": "reuven007@gmail.com", "subject": "Polaris Test Draft", "body": "This is a test message.", "reply_lang": "en"}
+    *   User: "שלח מייל ל-test@example.com עם נושא 'בדיקה' ותוכן 'זוהי הודעת בדיקה'"
+        -> {"action": "draft", "to": "test@example.com", "subject": "בדיקה", "body": "זוהי הודעת בדיקה", "reply_lang": "he"}
+
+If any required field for a draft (to, subject, body) is missing from the user's text, you MUST return that field as null in the JSON.
+For example, if the user says "draft an email to bob":
+-> {"action": "draft", "to": "bob", "subject": null, "body": null, "reply_lang": "en"}`;
 
     const aiResult = callOpenAI_(systemPrompt, text);
     if (!aiResult.ok) {

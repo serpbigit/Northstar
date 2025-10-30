@@ -1,0 +1,15 @@
+{
+  "name": "northstar-ts",
+  "version": "1.0.0",
+  "description": "Google Apps Script project for Northstar, migrated to TypeScript.",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "push": "npm run build && clasp push"
+  },
+  "devDependencies": {
+    "@google/clasp": "^2.4.2",
+    "@types/google-apps-script": "^1.0.83",
+    "typescript": "^5.4.5"
+  }
+}

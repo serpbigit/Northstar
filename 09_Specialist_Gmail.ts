@@ -126,15 +126,14 @@ For example, if the user says "draft an email to bob":
       return { ok: false, message: getGmailHelp_() };
     }
 
-    let cmd: GmailCommand;
-    try {
-      const jsonString = aiResult.response.replace(/```json\n|```/g, '').trim();
-      cmd = JSON.parse(jsonString);
-      if (!cmd || !cmd.action) throw new Error('AI returned empty or invalid command.');
-    } catch (e) {
-      log_('ERROR', 'cmd_HandleGmail_json_parse', { response: aiResult.response, err: (e as Error).message });
+    const parseResult = parseAiJson_<GmailCommand>(aiResult.response);
+    if (!parseResult.ok) {
+      log_('ERROR', 'cmd_HandleGmail_json_parse', { response: aiResult.response, err: parseResult.error });
       return { ok: false, message: getGmailHelp_() };
     }
+
+    const cmd = parseResult.data;
+    if (!cmd || !cmd.action) return { ok: false, message: getGmailHelp_() };
 
     log_('INFO', 'cmd_HandleGmail_cmd', { cmd });
 

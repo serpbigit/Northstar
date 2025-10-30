@@ -150,15 +150,14 @@ function cmd_HandleCalendar_(params: SpecialistParams): SpecialistResult {
       return { ok: false, message: getCalendarHelp_() };
     }
 
-    let cmd: CalendarCommand;
-    try {
-      const jsonString = aiResult.response.replace(/```json\n|```/g, '').trim();
-      cmd = JSON.parse(jsonString);
-      if (!cmd || !cmd.action) throw new Error('AI returned empty or invalid command.');
-    } catch (e) {
-      log_('ERROR', 'cmd_HandleCalendar_json_parse', { response: aiResult.response, err: (e as Error).message });
+    const parseResult = parseAiJson_<CalendarCommand>(aiResult.response);
+    if (!parseResult.ok) {
+      log_('ERROR', 'cmd_HandleCalendar_json_parse', { response: aiResult.response, err: parseResult.error });
       return { ok: false, message: getCalendarHelp_() };
     }
+
+    const cmd = parseResult.data;
+    if (!cmd || !cmd.action) return { ok: false, message: getCalendarHelp_() };
 
     log_('INFO', 'cmd_HandleCalendar_cmd', { cmd });
 

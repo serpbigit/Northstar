@@ -39,6 +39,15 @@ interface CallOpenAIResult {
   response: string;
 }
 
+interface ParseAiJsonResult<T> {
+  ok: true;
+  data: T;
+}
+
+// ========== Block#1.5 — UTIL: AI Response Parsing ==========
+
+
+
 // ========== Block#2 — UTIL: Logging & Sheets ==========
 
 function log_(level: LogLevel, evt: string, data: any): void {
@@ -77,6 +86,29 @@ function readTable_(sheetName: string): TableReadResult | ErrorResult {
     return { ok: true, header, rows };
   } catch (e) {
     return { ok: false, error: (e as Error).message };
+  }
+}
+
+/**
+ * Safely parses a JSON object from a raw string, which may be wrapped in markdown.
+ * @param rawText The raw string response from the AI.
+ * @returns A result object with the parsed data or an error.
+ */
+function parseAiJson_<T>(rawText: string): ParseAiJsonResult<T> | ErrorResult {
+  try {
+    // Regex to find a JSON object, which might be wrapped in ```json ... ```
+    const match = rawText.match(/\{[\s\S]*\}/);
+
+    if (!match) {
+      return { ok: false, error: 'No valid JSON object found in the AI response.' };
+    }
+
+    const jsonString = match[0];
+    const data = JSON.parse(jsonString) as T;
+    return { ok: true, data: data };
+  } catch (e) {
+    log_('ERROR', 'parseAiJson_', { rawText, err: (e as Error).message });
+    return { ok: false, error: `Failed to parse AI response as JSON: ${(e as Error).message}` };
   }
 }
 

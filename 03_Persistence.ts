@@ -1,25 +1,12 @@
-/*
- * Contains utility functions for persistence: saving and retrieving actions
- * from the 'PendingActions' sheet. This is the persistent queue for human approval.
- * (Block #2.5)
- */
-
-// ========== TYPE DEFINITIONS ==========
-
-interface PendingGetResult {
-    ok: true;
-    payload: Record<string, any>;
-}
-
 // ========== Block#2.5 — UTIL: Pending Actions Storage ==========
 
 /**
  * Stores a pending action in the sheet.
  * Returns {ok: true, message: '...'} or {ok: false, error: '...'}
  */
-function pending_save_(actionId: string, handlerKey: string, userId: string, spaceName: string, payload: Record<string, any>): SuccessResult | ErrorResult {
+function pending_save_(actionId: string, handlerKey: string, userId: string, spaceName: string, payload: Record<string, any>): { ok: true } | ErrorResult {
     try {
-        const rowData = {
+        const rowData: PendingActionSchema = {
             ActionID: actionId,
             Timestamp: new Date(),
             Status: 'PENDING',
@@ -30,7 +17,7 @@ function pending_save_(actionId: string, handlerKey: string, userId: string, spa
         };
 
         // CFG_PENDING_ is defined in 01_Config_Global.ts
-        appendRow_(CFG_PENDING_.SHEET, CFG_PENDING_.HEADERS, rowData);
+        appendRow_(CFG_PENDING_.SHEET, [...CFG_PENDING_.HEADERS], rowData);
         return { ok: true };
     } catch (e) {
         log_('ERROR', 'pending_save_', { err: (e as Error).message, actionId });
@@ -42,10 +29,10 @@ function pending_save_(actionId: string, handlerKey: string, userId: string, spa
  * Retrieves and marks an action as COMPLETED/DELETED in the sheet.
  * Returns {ok: true, payload: {...}} or {ok: false, error: '...'}
  */
-function pending_getAndExecute_(actionId: string): PendingGetResult | ErrorResult {
+function pending_getAndExecute_(actionId: string): { ok: true, payload: Record<string, any> } | ErrorResult {
     try {
-        const ss = SpreadsheetApp.getActiveSpreadsheet();
-        const sh = ensureSheet_(ss, CFG_PENDING_.SHEET, CFG_PENDING_.HEADERS);
+        const ss = SpreadsheetApp.getActiveSpreadsheet(); 
+        const sh = ensureSheet_(ss, CFG_PENDING_.SHEET, [...CFG_PENDING_.HEADERS]);
         const data = sh.getDataRange().getValues();
 
         const headerRow = data[0];

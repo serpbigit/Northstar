@@ -1,16 +1,5 @@
 // ========== Block#5 — Specialist: Sheets (Query 2) ==========
 
-interface SpecialistParams {
-  text: string;
-  [key: string]: any;
-}
-
-interface SpecialistResult {
-  ok: boolean;
-  message: string;
-  card?: any;
-}
-
 function cmd_HandleSheetData_(params: SpecialistParams): SpecialistResult {
   try {
     const text = params.text || '';

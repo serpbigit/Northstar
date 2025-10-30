@@ -28,8 +28,8 @@ function doGet(e: GoogleAppsScript.Events.DoGet): GoogleAppsScript.HTML.HtmlOutp
     } else {
       return HtmlService.createHtmlOutput(`<h1>❌ Execution Failed</h1><p>Error sending email: ${result.error}</p><p>Please inform the Polaris owner.</p>`);
     }
-  } catch (e) {
-    log_('ERROR', 'doGet_exception', { err: (e as Error).message, params: e.parameter });
+  } catch (error) {
+    log_('ERROR', 'doGet_exception', { err: (error as Error).message, params: e.parameter });
     return HtmlService.createHtmlOutput('<h1>🚨 Critical Server Error</h1><p>An unexpected error occurred during execution.</p>');
   }
 }
@@ -96,7 +96,7 @@ function hostReply_(reply: { text: string } | { cardsV2: any[] }) {
 function onCardClick(event: GoogleAppsScript.Events.ChatEvent) {
   try {
     // Assuming handleCardClick_ exists and is typed elsewhere
-    return (handleCardClick_ as any)(event);
+    return (globalThis as any).handleCardClick_(event);
   } catch (e) {
     log_('ERROR', 'onCardClick_entry', { err: (e as Error).message, event: event });
     return {
@@ -126,5 +126,12 @@ function onRemovedFromSpace(event: GoogleAppsScript.Events.ChatEvent) {
   log_('INFO', 'onRemovedFromSpace', {});
 }
 
-// Placeholder for a function that is called but not defined in the provided context
-declare function handleCardClick_(event: GoogleAppsScript.Events.ChatEvent): any;
+/**
+ * STUB for handling card clicks.
+ * This function will be implemented to handle interactive card elements.
+ */
+function handleCardClick_(event: GoogleAppsScript.Events.ChatEvent): any {
+  log_('INFO', 'handleCardClick_', { event });
+  // Placeholder response
+  return { actionResponse: { type: 'UPDATE_MESSAGE', message: { text: 'Card click received!' } } };
+}

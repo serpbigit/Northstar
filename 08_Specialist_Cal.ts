@@ -2,8 +2,6 @@
 
 // ========== TYPE DEFINITIONS ==========
 
-type Language = 'en' | 'he';
-
 interface CalendarReadCommand {
   action: 'read';
   start: string;

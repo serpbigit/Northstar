@@ -2,7 +2,7 @@
 /*
  * Contains general utility functions for logging, spreadsheet interaction (read/append),
  * and core AI/settings retrieval.
- * (Blocks #2 and #3)
+ * (Blocks #2, #3, and #2.1 - NEW)
  */
 // ========== Block#1.5 — UTIL: AI Response Parsing ==========
 // ========== Block#2 — UTIL: Logging & Sheets ==========
@@ -73,6 +73,31 @@ function appendRow_(sheetName, header, obj) {
     sh.appendRow(row);
     return { ok: true };
 }
+// ========== Block#2.1 — UTIL: Sheet Reader for Context Specialist (NEW) ==========
+/**
+ * Reads a sheet's data and returns it as a structured object array (rows mapped to headers).
+ * This is the utility for the Project Context Specialist.
+ * @param sheetName The name of the sheet to read.
+ * @returns {object} {name: string, data: Record<string, any>[]} or {name: string, error: string}
+ */
+function util_readSheetAsJson_(sheetName) {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
+    if (!sheet) {
+        return { name: sheetName, error: `Sheet not found.` };
+    }
+    try {
+        // Reuse the existing robust readTable_ logic
+        const result = readTable_(sheetName);
+        if (!result.ok) {
+            return { name: sheetName, error: result.error };
+        }
+        return { name: sheetName, data: result.rows };
+    }
+    catch (e) {
+        return { name: sheetName, error: e.message };
+    }
+}
+// ========== End Block#2.1 — UTIL: Sheet Reader for Context Specialist ==========
 // ========== Block#3 — UTIL: AI & Settings ==========
 function getSettings_() {
     try {

@@ -1,15 +1,18 @@
 {
   "name": "northstar-ts",
   "version": "1.0.0",
-  "description": "Google Apps Script project for Northstar, migrated to TypeScript.",
+  "description": "Polaris Agent (Google Apps Script / TypeScript PoC)",
   "main": "index.js",
   "scripts": {
-    "build": "tsc",
-    "push": "npm run build && clasp push"
+    "build": "tsc && cp appsscript.json dist/",
+    "push": "npm run build && clasp push",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@google/clasp": "^2.4.1"
   },
   "devDependencies": {
-    "@google/clasp": "^2.4.2",
-    "@types/google-apps-script": "^1.0.83",
+    "@types/google-apps-script": "^1.0.84",
     "typescript": "^5.4.5"
   }
 }

@@ -1,5 +1,5 @@
 // ==============================================================================
-// # Polaris Code Assist — Development Blueprint and Communication Policy
+// # Polaris Code Assist — Development Blueprint and Communication Policy.
 // ==============================================================================
 
 //#1 — PROJECT BACKGROUND & STACK

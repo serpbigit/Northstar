@@ -1,6 +1,6 @@
 "use strict";
 /**
- * Creates a custom menu in the Google Sheet UI when the sheet is opened.
+ * Creates a custom menu in the Google Sheet UI when the sheet is opened..
  */
 function onOpen() {
     try {

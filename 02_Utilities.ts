@@ -177,6 +177,7 @@ function callOpenAI_(systemPrompt: string, userText: string): CallOpenAIResult |
       contentType: 'application/json',
       headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}` },
       payload: JSON.stringify(payload),
+      // @ts-ignore - 'deadline' is a valid option but not in the current type definitions.
       deadline: 30, // Set a 30-second timeout for the API call
       muteHttpExceptions: true,
     };
@@ -205,7 +206,7 @@ function callOpenAI_(systemPrompt: string, userText: string): CallOpenAIResult |
       return { ok: false, error: 'OpenAI response was valid JSON but missing expected content.' };
     } catch (jsonError) {
       // This is critical for debugging if OpenAI returns non-JSON text
-      log_('ERROR', 'callOpenAI_json_parse_error', { err: (jsonError as Error).message, rawResponse: httpContent });
+      log_('ERROR', 'callOpenAI_json_parse_error', { error: (jsonError as Error).message, rawResponse: httpContent });
       return { ok: false, error: 'Failed to parse OpenAI response as JSON.' };
     }
   } catch (e) {

@@ -447,7 +447,8 @@ function onMessage(event) {
         const fn = resolveHandlerFn_(route.handler);
         if (!fn)
             return hostReply_({ text: `Handler not found: ${route.handler}` });
-        const out = fn({ text }); // Specialist runs
+        // Assuming fn returns {ok: boolean, message: string, card?: object}
+        const out = fn({ text, user: event.user?.name, space: event.space?.name });
         if (out.ok && out.card) {
             return hostReply_({ cardsV2: [out.card] });
         }
@@ -455,8 +456,9 @@ function onMessage(event) {
         return hostReply_({ text: reply });
     }
     catch (e) {
+        // FIX: Ensure this catch block returns the required structured response, not a simple string error.
         log_('ERROR', 'onMessage', { err: e.message });
-        return hostReply_({ text: '⚠️ Error handling your message.' });
+        return hostReply_({ text: `⚠️ Critical Error: Failed to process your message. Details: ${e.message}` });
     }
 }
 /**
@@ -507,7 +509,6 @@ function onRemovedFromSpace(event) {
 }
 /**
  * STUB for handling card clicks.
- * This function will be implemented to handle interactive card elements.
  */
 function handleCardClick_(event) {
     log_('INFO', 'handleCardClick_', { event });

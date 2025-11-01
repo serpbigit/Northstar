@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "prebuild": "rm -rf dist",
-    "build": "tsc && cp appsscript.json dist/ && chmod +x build-unified.sh && ./build-unified.sh",
+    "build": "tsc && cp appsscript.json dist/ && chmod +x scripts/build-unified.sh && scripts/build-unified.sh",
     "push": "echo 'Deployment is now MANUAL. See northstarUnified.gs for content.'",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

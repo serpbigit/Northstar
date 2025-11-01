@@ -132,14 +132,24 @@ For example, if the user says "draft an email to bob":
       return { ok: false, message: getGmailHelp_() };
     }
 
-    const cmd = parseResult.data;
+    // Use 'let' and type as 'any' to allow for in-memory correction of the object from the AI.
+    let cmd: any = parseResult.data;
+
+    // Pre-validation & Correction: Fix common AI mistakes before strict validation.
+    // If 'action' is missing but 'email' and 'subject' are present, assume it's a draft.
+    if (!cmd.action && cmd.email && cmd.subject) {
+      cmd.action = 'draft';
+      cmd.to = cmd.email;
+      delete cmd.email;
+    }
+
     if (!cmd || !cmd.action) return { ok: false, message: getGmailHelp_() };
 
     log_('INFO', 'cmd_HandleGmail_cmd', { cmd });
 
     switch (cmd.action) {
       case 'read':
-        return gmail_read_(cmd);
+        return gmail_read_(cmd as GmailReadCommand);
       case 'draft':
         const { to, subject, body, reply_lang: lang = 'en' } = cmd;
         if (!to || !subject || !body) return { ok: false, message: getGmailHelp_() };

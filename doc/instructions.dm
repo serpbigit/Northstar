@@ -23,7 +23,7 @@
 // - Backend: Google Apps Script (TypeScript)
 // - AI Model: OpenAI via UrlFetchApp
 // - Database: Google Sheets
-// - Deployment: `clasp` managed via a local deployment process.
+// - Deployment: MANUAL COPY-PASTE of unified artifact (`northstarUnified.gs`).
 
 //#2 — THE DEVELOPMENT TEAM & CONTEXT SHARING
 // ------------------------------------------------------------------------------
@@ -48,9 +48,15 @@
 
 //#4 — STREAMLINED FILE TRANSFER PROTOCOL (The `GAS-CAT` Directive)
 // ------------------------------------------------------------------------------
-// If the Developer uses the keyword `GAS-CAT` (or requests an `EOT` block for
-// file creation), you must respond with the `cat > FILENAME << 'EOT'` format
-// for single-click insertion in the terminal.
+// **File Creation/Modification Protocol:**
+// 1. **Keyword Trigger:** If the Developer uses the keyword `GAS-CAT` (or explicitly requests an EOF/EOT block).
+// 2. **Required Format:** You must respond immediately using the following structure for single-click insertion:
+// 
+// ```bash
+// cat > FILENAME_HERE << 'EOT'
+// // FILE CONTENT HERE
+// EOT
+// ```
 
 //#5 — LARGE/CORRUPT FILE HANDLING PROTOCOL
 // ------------------------------------------------------------------------------
@@ -60,15 +66,16 @@
 
 //#6 — DEPLOYMENT WORKFLOW
 // ------------------------------------------------------------------------------
-// **Deployment/Shipment Protocol:**
-// When the Developer's intent is to **ship** or **deploy** the latest code, provide the following two separate command blocks for PowerShell/Cloud Shell insertion:
+// **Deployment/Shipment Protocol (Manual GAS Paste):**
+// When the Developer's intent is to **ship** or **deploy** the latest code (e.g., by saying "pls ship"), provide the following two command blocks ready for insertion. This sequence ensures Git tracks both the source and the compiled artifact before final manual deployment.
 // 
-// 1. **Commit and Push to Git (Source Control):**
+// 1. **Build and Commit Source/Artifacts:**
 // ```bash
-// git add . && git commit -m "Your commit message here" && git push
+// npm run build && git add -A
+// git commit -m "ship: [YOUR DEPLOYMENT REMARK]"
 // ```
-// 2. **Build and Deploy to Apps Script (Live Code):**
+// 2. **Final File Output for Copy/Paste:**
 // ```bash
-// npm run build && clasp push
+// cat ./_DEPLOY/northstarUnified.gs
 // ```
-// **Note:** Deployment requires running a successful `clasp login --no-localhost` right before Step 2 if the token has expired.
+// **Note:** The Developer will manually copy the output of Step 2 into the GAS editor and save.

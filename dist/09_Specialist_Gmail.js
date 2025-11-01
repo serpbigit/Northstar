@@ -118,10 +118,14 @@ For example, if the user says "draft an email to bob":
                 if (!to || !subject || !body)
                     return { ok: false, message: getGmailHelp_() };
                 const pendingActionId = `gmail-send-${Utilities.getUuid()}`;
-                CacheService.getScriptCache().put(pendingActionId, JSON.stringify(cmd), 300);
+                const saveResult = pending_save_(pendingActionId, 'handle_gmail', params.user, params.space, cmd);
+                if (!saveResult.ok) {
+                    log_('ERROR', 'cmd_HandleGmail_save_failed', { err: saveResult.error });
+                    return { ok: false, message: '⚠️ Could not save pending action. Please try again.' };
+                }
                 const approvalUrl = `${ScriptApp.getService().getUrl()}?action=gmail_send_confirm&id=${pendingActionId}`;
                 const linkText = lang === 'he' ? 'לחץ כאן לשליחה מיידית' : 'CLICK HERE TO SEND NOW';
-                const message = `*Gmail Approval Needed*\n> **To:** ${to}\n> **Subject:** ${subject}\n\n${linkText}`;
+                const message = `*Gmail Approval Needed*\n> **To:** ${to}\n> **Subject:** ${subject}\n\n<${approvalUrl}|${linkText}>`;
                 return { ok: true, message: message };
             default:
                 log_('WARN', 'cmd_HandleGmail_unknown_action', { cmd });

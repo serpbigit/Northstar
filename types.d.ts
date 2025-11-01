@@ -27,6 +27,8 @@ type Language = 'en' | 'he';
  */
 interface SpecialistParams {
   text: string;
+  user: string; // User ID, e.g. 'users/12345'
+  space: string; // Space ID, e.g. 'spaces/ABCDE'
   [key: string]: any;
 }
 

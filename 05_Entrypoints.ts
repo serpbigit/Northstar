@@ -8,25 +8,34 @@ function doGet(e: GoogleAppsScript.Events.DoGet): GoogleAppsScript.HTML.HtmlOutp
     const action = e.parameter.action;
     const pendingActionId = e.parameter.id;
 
-    if (action !== 'gmail_send_confirm' || !pendingActionId) {
-      return HtmlService.createHtmlOutput('<h1>❌ Invalid Approval Link</h1><p>The link is malformed or expired.</p>');
+    if (!pendingActionId) {
+      return HtmlService.createHtmlOutput('<h1>❌ Invalid Link</h1><p>The link is missing a required action ID.</p>');
     }
 
-    const cache = CacheService.getScriptCache();
-    const cachedData = cache.get(pendingActionId);
-    cache.remove(pendingActionId);
+    // The `action` parameter can be used to route to different handlers if needed in the future.
+    // For now, all actions are handled by the pending action system.
 
-    if (!cachedData) {
-      return HtmlService.createHtmlOutput('<h1>⏳ Action Expired</h1><p>The approval link has expired or was already used.</p>');
+    // This is the primary handler for sheet-based pending actions.
+    const execResult = pending_getAndExecute_(pendingActionId);
+    if (!execResult.ok) {
+      return HtmlService.createHtmlOutput(`<h1>❌ Action Failed</h1><p>${execResult.error}</p>`);
     }
 
-    const cmd = JSON.parse(cachedData);
-    const result = gmail_send_(cmd);
+    // Assuming the payload is for gmail_send_ for now. This can be expanded later.
+    const cmd = execResult.payload as { to: string; subject: string; body: string; reply_lang?: Language };
 
-    if (result.ok) {
+    // Add a runtime check to ensure the payload is valid before sending.
+    if (!cmd || !cmd.to || !cmd.subject || !cmd.body) {
+      return HtmlService.createHtmlOutput(`<h1>❌ Action Failed</h1><p>The action payload was incomplete or corrupted.</p>`);
+    }
+
+    const sendResult = gmail_send_(cmd);
+
+    if (sendResult.ok) {
       return HtmlService.createHtmlOutput(`<h1>✅ Success!</h1><p>Email sent to **${cmd.to}** with subject: "${cmd.subject}".</p><p>You can now close this window.</p>`);
     } else {
-      return HtmlService.createHtmlOutput(`<h1>❌ Execution Failed</h1><p>Error sending email: ${result.error}</p><p>Please inform the Polaris owner.</p>`);
+      // The 'error' property is guaranteed by the return type of gmail_send_ on failure.
+      return HtmlService.createHtmlOutput(`<h1>❌ Execution Failed</h1><p>Error sending email: ${sendResult.error}</p><p>Please inform the Polaris owner.</p>`);
     }
   } catch (error) {
     log_('ERROR', 'doGet_exception', { err: (error as Error).message, params: e.parameter });

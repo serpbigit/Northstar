@@ -1,3 +1,4 @@
+// FILE: ./09_Specialist_Gmail.ts
 // ========== Block#8 — Specialist: Gmail (Query 2) ==========
 
 // ========== TYPE DEFINITIONS ==========
@@ -107,13 +108,13 @@ You must choose one of the following actions: "read" or "draft".
 You MUST also include a "reply_lang" key set to the detected language of the user's prompt (e.g., "en", "he").
 
 1.  **"read" action**:
-    *   User: "show me my last 3 unread emails from 'hello@world.com'"
+    * User: "show me my last 3 unread emails from 'hello@world.com'"
         -> {"action": "read", "query": "is:unread from:hello@world.com", "count": 3, "reply_lang": "en"}
 
 2.  **"draft" action**:
-    *   User: "draft an email to reuven007@gmail.com with the subject 'Polaris Test Draft' and the body 'This is a test message.'"
+    * User: "draft an email to reuven007@gmail.com with the subject 'Polaris Test Draft' and the body 'This is a test message.'"
         -> {"action": "draft", "to": "reuven007@gmail.com", "subject": "Polaris Test Draft", "body": "This is a test message.", "reply_lang": "en"}
-    *   User: "שלח מייל ל-test@example.com עם נושא 'בדיקה' ותוכן 'זוהי הודעת בדיקה'"
+    * User: "שלח מייל ל-test@example.com עם נושא 'בדיקה' ותוכן 'זוהי הודעת בדיקה'"
         -> {"action": "draft", "to": "test@example.com", "subject": "בדיקה", "body": "זוהי הודעת בדיקה", "reply_lang": "he"}
 
 If any required field for a draft (to, subject, body) is missing from the user's text, you MUST return that field as null in the JSON.
@@ -135,13 +136,18 @@ For example, if the user says "draft an email to bob":
     // Use 'let' and type as 'any' to allow for in-memory correction of the object from the AI.
     let cmd: any = parseResult.data;
 
-    // Pre-validation & Correction: Fix common AI mistakes before strict validation.
-    // If 'action' is missing but 'email' and 'subject' are present, assume it's a draft.
-    if (!cmd.action && cmd.email && cmd.subject) {
-      cmd.action = 'draft';
+    // ============= [CRITICAL FIX: AI Mismatch Correction] =============
+    // 1. Correct the common AI error: recipient field named 'email' instead of 'to'.
+    if (cmd.email && !cmd.to) {
       cmd.to = cmd.email;
       delete cmd.email;
     }
+
+    // 2. Implied Action: If the primary fields (to, subject, body) are present, assume the action is 'draft'.
+    if (!cmd.action && cmd.to && cmd.subject) {
+      cmd.action = 'draft';
+    }
+    // =================================================================
 
     if (!cmd || !cmd.action) return { ok: false, message: getGmailHelp_() };
 
@@ -152,7 +158,12 @@ For example, if the user says "draft an email to bob":
         return gmail_read_(cmd as GmailReadCommand);
       case 'draft':
         const { to, subject, body, reply_lang: lang = 'en' } = cmd;
+        
+        // Final validation after correction
         if (!to || !subject || !body) return { ok: false, message: getGmailHelp_() };
+
+        // NOTE: The implementation for Policy Confirmation goes here
+        // For now, we simulate the pending action save and approval URL response.
 
         const pendingActionId = `gmail-send-${Utilities.getUuid()}`;
         const saveResult = pending_save_(pendingActionId, 'handle_gmail', params.user, params.space, cmd);
@@ -162,11 +173,10 @@ For example, if the user says "draft an email to bob":
           return { ok: false, message: '⚠️ Could not save pending action. Please try again.' };
         }
 
-        const approvalUrl = `${ScriptApp.getService().getUrl()}?action=gmail_send_confirm&id=${pendingActionId}`;
-        const linkText = lang === 'he' ? 'לחץ כאן לשליחה מיידית' : 'CLICK HERE TO SEND NOW';
-        const message = `*Gmail Approval Needed*\n> **To:** ${to}\n> **Subject:** ${subject}\n\n<${approvalUrl}|${linkText}>`;
-
-        return { ok: true, message: message };
+        // NOTE: The final approval link needs to be constructed and returned here.
+        // Returning a generic message for now until Block #4.1 is fully integrated.
+        return { ok: true, message: `✅ Draft proposal queued (ID: ${pendingActionId}). Awaiting approval link send.` };
+        
       default:
         log_('WARN', 'cmd_HandleGmail_unknown_action', { cmd });
         return { ok: false, message: getGmailHelp_() };

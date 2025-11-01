@@ -19,6 +19,6 @@ const CFG_PENDING_ = {
 } as const;
 
 // To make these variables available globally in the Apps Script environment after compilation,
-// you can explicitly attach them to the `global` object.
-(global as any).CFG_ = CFG_;
-(global as any).CFG_PENDING_ = CFG_PENDING_;
+// we attach them to the global scope using 'this'. (GAS V8 compatibility fix)
+(this as any).CFG_ = CFG_;
+(this as any).CFG_PENDING_ = CFG_PENDING_;

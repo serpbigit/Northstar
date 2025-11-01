@@ -10,6 +10,7 @@
  * Run this function MANUALLY from the Apps Script editor
  * to trigger the authorization prompt for all required scopes.
  */
+// Test comment
 function authorize_(): void {
   try {
     // 1. Sheets

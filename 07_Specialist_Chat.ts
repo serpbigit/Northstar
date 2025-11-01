@@ -66,3 +66,16 @@ function cmd_HandleWebSearch_(params: SpecialistParams): SpecialistResult {
     message: '🤖 Web search is not implemented yet. We need to add a Search API (like Google Custom Search) first.'
   };
 }
+
+/**
+ * Returns the current script version from the global config.
+ * This is a simple utility to confirm which code version is deployed and running.
+ */
+function cmd_GetVersion_(params: SpecialistParams): SpecialistResult {
+  try {
+    const version = CFG_.VERSION || 'unknown';
+    return { ok: true, message: `✅ Polaris is running version: **${version}**` };
+  } catch (e) {
+    return { ok: false, message: '⚠️ Could not retrieve version information.' };
+  }
+}

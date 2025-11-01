@@ -79,7 +79,8 @@ function nlpPickCommand_(text: string): NlpResult {
       { key: 'handle_calendar', desc: 'Use to create, read, or manage calendar events.' },
       { key: 'handle_sheet_data', desc: 'Use to add or list items in a spreadsheet list (e.g., "add milk to groceries").' },
       { key: 'general_chat', desc: 'Use for general conversation or questions not covered by other tools.' },
-      { key: 'help', desc: 'Use to ask for help or a list of capabilities.' }
+      { key: 'help', desc: 'Use to ask for help or a list of capabilities.' },
+      { key: 'get_version', desc: 'Returns the current deployment version of the script.' }
     ];
 
     const coreHandlerKeys = new Set(coreHandlers.map(h => h.key));

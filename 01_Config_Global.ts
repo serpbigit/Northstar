@@ -8,6 +8,7 @@ const CFG_ = {
   HANDLERS_SHEET: 'Handlers',
   DATAAGENTS_SHEET: 'DataAgents',
   LOG_SHEET: 'Log',
+  VERSION: '1.3.0', // Manually update this before each deployment
   DEFAULT_AGENT: 'Default',
 } as const;
 

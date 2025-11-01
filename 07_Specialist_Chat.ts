@@ -1,5 +1,12 @@
 // ========== Block#6 — Specialists: Help, Chat, Search ==========
 
+// ========== TYPE DEFINITIONS ==========
+
+interface ErrorResult {
+  ok: false;
+  error: string;
+}
+
 /**
  * Handles 'help' requests. Dynamically lists available handlers.
  */
@@ -32,7 +39,8 @@ function cmd_GeneralChat_(params: SpecialistParams): SpecialistResult {
     const text = params.text || '';
     const agentsTblResult = readTable_(CFG_.DATAAGENTS_SHEET);
 
-    let instructions = 'You are a helpful assistant.'; // Hardcoded fallback
+    // Temporary change to confirm deployment.
+    let instructions = 'You are a helpful assistant. When you cannot answer a question, start your response with "My apologies, but..."';
 
     if (agentsTblResult.ok && agentsTblResult.rows.length) {
       const defaultAgent = agentsTblResult.rows.find(r =>

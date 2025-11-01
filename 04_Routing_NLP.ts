@@ -2,6 +2,12 @@
 
 // ========== TYPE DEFINITIONS ==========
 
+// This is a generic error type used by many utility functions.
+interface ErrorResult {
+  ok: false;
+  error: string;
+}
+
 interface Handler {
   key: string;
   fn: string;
@@ -106,11 +112,17 @@ Here is the list of available handlers:\n${toolList}`;
     }
 
     const chosenHandlerKey = aiResult.response.trim().replace(/[."']/g, '');
-    let chosenHandler = manifest.handlers.find(h => h.key === chosenHandlerKey);
+
+    // Combine core and custom handlers for the final lookup. This is the fix.
+    const allAvailableHandlers = [
+      ...coreHandlers.map(h => ({ ...h, fn: `cmd_${h.key.charAt(0).toUpperCase() + h.key.slice(1).replace(/_([a-z])/g, g => g[1].toUpperCase())}_` })),
+      ...manifest.handlers.filter(h => !coreHandlerKeys.has(h.key))
+    ];
+    let chosenHandler = allAvailableHandlers.find(h => h.key === chosenHandlerKey);
 
     if (!chosenHandler) {
       log_('WARN', 'nlpPickCommand_AI_mismatch', { text: text, chosenKey: chosenHandlerKey });
-      chosenHandler = manifest.handlers.find(h => h.key === 'general_chat');
+      chosenHandler = allAvailableHandlers.find(h => h.key === 'general_chat');
       if (!chosenHandler) return { ok: false, reason: 'no-match' }; // Failsafe
     }
 

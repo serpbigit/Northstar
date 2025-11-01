@@ -8,9 +8,10 @@
 // ========== Block#2 — UTIL: Logging & Sheets ==========
 function log_(level, evt, data) {
     try {
-        const row = [new Date(), level, evt, JSON.stringify(data || {}).slice(0, 3000)];
+        const version = globalThis.CFG_?.VERSION || 'unknown';
+        const row = [new Date(), version, level, evt, JSON.stringify(data || {}).slice(0, 3000)];
         const ss = SpreadsheetApp.getActiveSpreadsheet();
-        const sh = ensureSheet_(ss, CFG_.LOG_SHEET, ['ts', 'level', 'evt', 'details']);
+        const sh = ensureSheet_(ss, CFG_.LOG_SHEET, ['ts', 'version', 'level', 'evt', 'details']);
         sh.appendRow(row);
     }
     catch (e) {

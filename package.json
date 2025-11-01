@@ -4,8 +4,9 @@
   "description": "Polaris Agent (Google Apps Script / TypeScript PoC)",
   "main": "index.js",
   "scripts": {
-    "build": "tsc && cp appsscript.json dist/",
-    "push": "npm run build && clasp push",
+    "prebuild": "rm -rf dist",
+    "build": "tsc && cp appsscript.json dist/ && chmod +x build-unified.sh && ./build-unified.sh",
+    "push": "echo 'Deployment is now MANUAL. See northstarUnified.gs for content.'",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {

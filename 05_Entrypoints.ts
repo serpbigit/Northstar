@@ -59,6 +59,7 @@ function onMessage(event: GoogleAppsScript.Events.ChatEvent) {
   try {
     const text = (event.message?.text || '').trim();
 
+    // NOTE: In the future, we would check for IACP bypass here first.
     const route = nlpPickCommand_(text);
 
     log_('INFO', 'nlpPickCommand_decision', {
@@ -67,7 +68,8 @@ function onMessage(event: GoogleAppsScript.Events.ChatEvent) {
     });
 
     if (!route.ok) {
-      const userErr = route.reason === 'no-match' ? `🤖 Echo: ${text}` : `Router error: ${route.reason}`;
+      // Return a standard error message for no match or routing failure
+      const userErr = route.reason === 'no-match' ? `🤖 My apologies, but your request ("${text}") did not match any specialist handler.` : `⚠️ Router error: ${route.reason}`;
       return hostReply_({ text: userErr });
     }
 
@@ -75,6 +77,7 @@ function onMessage(event: GoogleAppsScript.Events.ChatEvent) {
     if (!fn) return hostReply_({ text: `Handler not found: ${route.handler}` });
 
     // Assuming fn returns {ok: boolean, message: string, card?: object}
+    // Pass user/space context to the handler here
     const out = fn({ text, user: event.user?.name, space: event.space?.name }); 
 
     if (out.ok && out.card) {
@@ -84,20 +87,25 @@ function onMessage(event: GoogleAppsScript.Events.ChatEvent) {
     const reply = (out && out.message) || JSON.stringify(out);
     return hostReply_({ text: reply });
   } catch (e) {
-    // FIX: The error handling must call hostReply_ to return the required structured response.
+    // FIX: Ensure this catch block returns the required structured response, not a simple string error.
     log_('ERROR', 'onMessage', { err: (e as Error).message });
     return hostReply_({ text: `⚠️ Critical Error: Failed to process your message. Details: ${(e as Error).message}` });
   }
 }
 
 /**
- * Host reply builder. Handles text OR cardsV2. (MISSING FUNCTION - ADDED HERE)
+ * Host reply builder. Handles text OR cardsV2. 
+ * This function ensures the final structure is a clean ActionResponse, 
+ * resolving the "Invalid add-on response" error.
  */
 function hostReply_(reply: { text: string } | { cardsV2: any[] }) {
+  // If 'text' is provided, format it into the required 'message' object structure.
+  const messageContent = (reply as { text: string }).text ? { text: (reply as { text: string }).text } : reply;
+  
   return {
     actionResponse: {
       type: 'NEW_MESSAGE',
-      message: reply
+      message: messageContent
     }
   };
 }

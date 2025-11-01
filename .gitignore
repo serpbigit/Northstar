@@ -1,3 +1,6 @@
 .clasp.json
 node_modules/
 docs/
+
+# Ignore compiled JavaScript files in the root
+*.js

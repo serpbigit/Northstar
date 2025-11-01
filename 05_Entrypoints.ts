@@ -1,3 +1,4 @@
+// FILE: ./05_Entrypoints.ts
 // ========== Block#8.5 — Web App Entrypoint (doGet) ==========
 
 /**
@@ -83,14 +84,14 @@ function onMessage(event: GoogleAppsScript.Events.ChatEvent) {
     const reply = (out && out.message) || JSON.stringify(out);
     return hostReply_({ text: reply });
   } catch (e) {
-    // FIX: Ensure this catch block returns the required structured response, not a simple string error.
+    // FIX: The error handling must call hostReply_ to return the required structured response.
     log_('ERROR', 'onMessage', { err: (e as Error).message });
     return hostReply_({ text: `⚠️ Critical Error: Failed to process your message. Details: ${(e as Error).message}` });
   }
 }
 
 /**
- * Host reply builder. Handles text OR cardsV2.
+ * Host reply builder. Handles text OR cardsV2. (MISSING FUNCTION - ADDED HERE)
  */
 function hostReply_(reply: { text: string } | { cardsV2: any[] }) {
   return {

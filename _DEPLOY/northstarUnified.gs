@@ -382,6 +382,7 @@ Here is the list of available handlers:\n${toolList}`;
 // FILE: 05_Entrypoints.js
 /* --- BLOCK START --- */
 "use strict";
+// FILE: ./05_Entrypoints.ts
 // ========== Block#8.5 — Web App Entrypoint (doGet) ==========
 /**
  * Handles GET requests from the approval hyperlink.
@@ -456,13 +457,13 @@ function onMessage(event) {
         return hostReply_({ text: reply });
     }
     catch (e) {
-        // FIX: Ensure this catch block returns the required structured response, not a simple string error.
+        // FIX: The error handling must call hostReply_ to return the required structured response.
         log_('ERROR', 'onMessage', { err: e.message });
         return hostReply_({ text: `⚠️ Critical Error: Failed to process your message. Details: ${e.message}` });
     }
 }
 /**
- * Host reply builder. Handles text OR cardsV2.
+ * Host reply builder. Handles text OR cardsV2. (MISSING FUNCTION - ADDED HERE)
  */
 function hostReply_(reply) {
     return {

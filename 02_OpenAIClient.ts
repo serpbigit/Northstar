@@ -7,39 +7,36 @@
 
 /**
  * Gets key-value pairs from the Settings sheet.
- * Caches settings for 10 minutes to reduce Sheet API calls (CacheService is a shared resource).
+ * Caches settings for 10 minutes to reduce Sheet API calls.
  * @returns {object} {ok: true, settings: object} or {ok: false, error: string}
  */
-function getSettings_() {
+function getSettings_(): any {
   try {
-    const cache = CacheService.getScriptCache();
-    const CACHE_KEY = 'polaris_settings';
-    const cached = cache.get(CACHE_KEY);
+    const cache: any = CacheService.getScriptCache();
+    const CACHE_KEY: string = 'polaris_settings';
+    const cached: any = cache.get(CACHE_KEY);
     if (cached) return { ok: true, settings: JSON.parse(cached) };
 
-    const tbl = readTable_(CFG_.SETTINGS_SHEET);
+    const tbl: any = readTable_(CFG_.SETTINGS_SHEET);
     if (!tbl.ok || !tbl.rows.length) {
       return { ok: false, error: 'Settings sheet is empty or unreadable.' };
     }
 
     // Assumes Settings sheet has 'Key' and 'Value' columns
-    const settings = tbl.rows.reduce((acc, row) => {
-      // Tolerate different header casing (key/Key, value/Value)
-      const k = row.Key || row.key; 
-      const v = row.Value || row.value;
+    const settings: any = tbl.rows.reduce((acc: any, row: any) => {
+      const k: any = row.Key || row.key; 
+      const v: any = row.Value || row.value;
       if (k) acc[k] = v;
       return acc;
     }, {});
     
-    // Check for essential keys before caching
     if (!settings.OPENAI_API_KEY || !settings.OPENAI_MODEL) {
        log_('WARN', 'getSettings_', 'OPENAI_API_KEY or OPENAI_MODEL missing from Settings');
     }
 
-    // Cache for 10 minutes (600 seconds)
     cache.put(CACHE_KEY, JSON.stringify(settings), 600); 
     return { ok: true, settings };
-  } catch (e) {
+  } catch (e: any) {
     log_('ERROR', 'getSettings_', { err: e.message });
     return { ok: false, error: e.message };
   }
@@ -47,27 +44,26 @@ function getSettings_() {
 
 /**
  * Calls the OpenAI Chat Completions API using UrlFetchApp.
- * This is the core intelligence call for both Query 1 (Router) and Query 2 (Specialist).
  * @param {string} systemPrompt The system-level instruction for the AI.
  * @param {string} userText The user's input text.
  * @returns {object} {ok: true, response: string} or {ok: false, error: string}
  */
-function callOpenAI_(systemPrompt, userText) {
+function callOpenAI_(systemPrompt: any, userText: any): any {
   try {
     // 1. Get API Key and Model from settings
-    const settingsData = getSettings_();
+    const settingsData: any = getSettings_();
     if (!settingsData.ok) {
       return { ok: false, error: `Failed to get settings: ${settingsData.error}` };
     }
     
-    const { OPENAI_API_KEY, OPENAI_MODEL } = settingsData.settings;
+    const { OPENAI_API_KEY, OPENAI_MODEL }: any = settingsData.settings;
     if (!OPENAI_API_KEY || !OPENAI_MODEL) {
       return { ok: false, error: 'OPENAI_API_KEY or OPENAI_MODEL is not set in the Settings sheet.' };
     }
 
     // 2. Prepare the HTTP request payload and options
-    const url = 'https://api.openai.com/v1/chat/completions';
-    const payload = {
+    const url: string = 'https://api.openai.com/v1/chat/completions';
+    const payload: any = {
       model: OPENAI_MODEL,
       messages: [
         { role: 'system', content: systemPrompt },
@@ -77,41 +73,32 @@ function callOpenAI_(systemPrompt, userText) {
       temperature: 0.7,
     };
     
-    const options = {
+    const options: any = {
       method: 'post',
       contentType: 'application/json',
       headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}` },
       payload: JSON.stringify(payload),
-      muteHttpExceptions: true, // IMPORTANT for robust error handling
+      muteHttpExceptions: true,
     };
 
     // 3. Execute the external request
-    const httpResponse = UrlFetchApp.fetch(url, options);
-    const httpCode = httpResponse.getResponseCode();
-    const httpContent = httpResponse.getContentText();
+    const httpResponse: any = UrlFetchApp.fetch(url, options);
+    const httpCode: number = httpResponse.getResponseCode();
+    const httpContent: string = httpResponse.getContentText();
 
     // 4. Handle non-200 HTTP errors
     if (httpCode !== 200) {
-      let errorMessage = httpContent.slice(0, 500); // Default to raw slice
-      try {
-        // Attempt to parse the error for a cleaner message from the API
-        const errorJson = JSON.parse(httpContent);
-        if (errorJson.error && errorJson.error.message) {
-          errorMessage = errorJson.error.message;
-        }
-      } catch (e) { /* Ignore parse error, use the raw slice */ }
-      
-      log_('ERROR', 'callOpenAI_', { httpCode, errorMessage });
-      return { ok: false, error: `OpenAI API Error ${httpCode}: ${errorMessage}` };
+      log_('ERROR', 'callOpenAI_', { httpCode, httpContent: httpContent.slice(0, 500) });
+      return { ok: false, error: `OpenAI API Error ${httpCode}: ${httpContent.slice(0, 500)}` };
     }
 
     // 5. Parse and return the successful response
-    const json = JSON.parse(httpContent);
-    const responseText = json.choices[0].message.content.trim();
+    const json: any = JSON.parse(httpContent);
+    const responseText: string = json.choices[0].message.content.trim();
     
     return { ok: true, response: responseText };
     
-  } catch (e) {
+  } catch (e: any) {
     log_('ERROR', 'callOpenAI_', { err: e.message });
     return { ok: false, error: e.message };
   }

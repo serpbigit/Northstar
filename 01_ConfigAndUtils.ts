@@ -7,7 +7,7 @@
 /**
  * Global configuration constants for sheet names.
  */
-const CFG_ = {
+const CFG_: any = {
   SETTINGS_SHEET: 'Settings',
   HANDLERS_SHEET: 'Handlers',
   DATAAGENTS_SHEET: 'DataAgents',
@@ -22,8 +22,8 @@ const CFG_ = {
 /**
  * Ensures a sheet exists and creates it with a header if missing.
  */
-function ensureSheet_(ss, name, header) {
-  let sh = ss.getSheetByName(name);
+function ensureSheet_(ss: any, name: any, header: any = []): any {
+  let sh: any = ss.getSheetByName(name);
   if (!sh) {
     sh = ss.insertSheet(name);
     if (header && header.length) sh.getRange(1, 1, 1, header.length).setValues([header]);
@@ -34,18 +34,18 @@ function ensureSheet_(ss, name, header) {
 /**
  * Centralized, structured execution and debugging log (Archivist Agent reliance).
  */
-function log_(level, evt, data) {
+function log_(level: any, evt: any, data: any) {
   try {
-    const row = [
+    const row: any = [
       new Date(), 
       level, 
       evt, 
       JSON.stringify(data || {}).slice(0, 3000)
     ];
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sh = ensureSheet_(ss, CFG_.LOG_SHEET, ['ts', 'level', 'evt', 'details']);
+    const ss: any = SpreadsheetApp.getActiveSpreadsheet();
+    const sh: any = ensureSheet_(ss, CFG_.LOG_SHEET, ['ts', 'level', 'evt', 'details']); 
     sh.appendRow(row);
-  } catch (e) {
+  } catch (e: any) {
     try { 
       console.error('log_ fail: ' + e.message); 
     } catch (_) {}
@@ -55,24 +55,24 @@ function log_(level, evt, data) {
 /**
  * Reads a sheet table, converting rows into an array of objects based on the header.
  */
-function readTable_(sheetName) {
+function readTable_(sheetName: any): any {
   try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sh = ensureSheet_(ss, sheetName);
-    const rng = sh.getDataRange();
-    const vals = rng.getValues();
+    const ss: any = SpreadsheetApp.getActiveSpreadsheet();
+    const sh: any = ensureSheet_(ss, sheetName);
+    const rng: any = sh.getDataRange();
+    const vals: any = rng.getValues();
 
     if (vals.length < 1) return { ok: true, header: [], rows: [] };
     
-    const header = vals[0].map(h => String(h).trim()); 
+    const header: any = vals[0].map((h: any) => String(h).trim()); 
     if (vals.length < 2) return { ok: true, header, rows: [] };
     
-    const rows = vals.slice(1).map(r => 
-      Object.fromEntries(header.map((h, i) => [h, r[i]]))
+    const rows: any = vals.slice(1).map((r: any) => 
+      Object.fromEntries(header.map((h: any, i: any) => [h, r[i]]))
     );
     
     return { ok: true, header, rows };
-  } catch (e) {
+  } catch (e: any) {
     log_('ERROR', 'readTable_', { err: e.message, sheet: sheetName });
     return { ok: false, error: e.message, header: [], rows: [] };
   }
@@ -81,16 +81,16 @@ function readTable_(sheetName) {
 /**
  * Appends an object's values to a sheet row based on a required header array.
  */
-function appendRow_(sheetName, header, obj) {
+function appendRow_(sheetName: any, header: any, obj: any): any {
   try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sh = ensureSheet_(ss, sheetName, header);
+    const ss: any = SpreadsheetApp.getActiveSpreadsheet();
+    const sh: any = ensureSheet_(ss, sheetName, header);
     
-    const row = header.map(h => obj[h] ?? '');
+    const row: any = header.map((h: any) => obj[h] ?? '');
     
     sh.appendRow(row);
     return { ok: true };
-  } catch (e) {
+  } catch (e: any) {
     log_('ERROR', 'appendRow_', { err: e.message, sheet: sheetName, data: obj });
     return { ok: false, error: e.message };
   }
@@ -98,15 +98,12 @@ function appendRow_(sheetName, header, obj) {
 
 /**
  * Helper function used by the LibraryInterface to resolve GAS functions dynamically.
- * Note: This function must be visible to all core agent files.
- * @param {string} name The name of the function to resolve (e.g., 'cmd_HandleGmail_').
- * @returns {Function | null} The function object or null if not found.
+ * *** FIX: Explicitly type 'this' to resolve TS2683 error ***
  */
-function resolveHandlerFn_(name) {
-  // Tolerant resolver: accepts with or without trailing underscore
-  const n = String(name || '');
+function resolveHandlerFn_(this: any, name: any): any {
+  const n: any = String(name || '');
   
-  // Check global scope for function names defined in the concatenated script
+  // Check global scope using the explicitly typed 'this'
   if (typeof this[n] === 'function') return this[n];
   if (n.endsWith('_') && typeof this[n.slice(0, -1)] === 'function') return this[n.slice(0, -1)];
   if (!n.endsWith('_') && typeof this[n + '_'] === 'function') return this[n + '_'];
@@ -116,9 +113,9 @@ function resolveHandlerFn_(name) {
 /**
  * Manually callable function to set up the minimal Polaris sheet structure.
  */
-function GoogleSheets_Setup() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const ui = SpreadsheetApp.getUi();
+function GoogleSheets_Setup(): any {
+  const ss: any = SpreadsheetApp.getActiveSpreadsheet();
+  const ui: any = SpreadsheetApp.getUi();
 
   try {
     // 1. Create essential system sheets with their headers
@@ -134,7 +131,7 @@ function GoogleSheets_Setup() {
 
     ui.alert('✅ Polaris Setup Complete!', 'All essential system sheets have been created and initialized.', ui.ButtonSet.OK);
 
-  } catch (e) {
+  } catch (e: any) {
     console.error('Setup Error: ' + e.message);
     ui.alert('⚠️ Setup Failed', 'An error occurred during sheet creation: ' + e.message, ui.ButtonSet.OK);
   }

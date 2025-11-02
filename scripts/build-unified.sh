@@ -5,8 +5,6 @@
 OUTPUT_FILE="./_DEPLOY/northstarUnified.gs"
 OUTPUT_DIR="./dist"
 TSCONFIG_FILE="./tsconfig.json"
-TSC_PATH="../node_modules/.bin/tsc" 
-CLEANUP_SCRIPT="./scripts/cleanup.sh"
 
 # --- 1. CLEANUP AND DIRECTORY SETUP ---
 rm -rf "$OUTPUT_DIR"
@@ -17,7 +15,8 @@ echo "--- Cleaned and created fresh output directories."
 
 # --- 2. COMPILATION ---
 echo "--- Compiling TypeScript files (TS -> JS) ---"
-"$TSC_PATH" --project "$TSCONFIG_FILE" --outDir "$OUTPUT_DIR"
+# *** DEFINITIVE FIX: Use npx to locate the local tsc executable ***
+npx tsc --project "$TSCONFIG_FILE" --outDir "$OUTPUT_DIR"
 if [ $? -ne 0 ]; then
     echo "❌ ERROR: TypeScript compilation failed. Check your .ts files."
     exit 1
@@ -35,13 +34,14 @@ find "$OUTPUT_DIR" -name "*.js" | sort | while read FILE; do
     echo "// FILE: $BASE_FILENAME.ts" >> "$OUTPUT_FILE"
     echo "/* --- BLOCK START --- */" >> "$OUTPUT_FILE"
     
-    # Concatenate the content, remove the '"use strict";' line
+    # Concatenate the content, then remove the '"use strict";' line
     cat "$FILE" | grep -v '\"use strict\"' >> "$OUTPUT_FILE"
     
     echo "/* --- BLOCK END --- */" >> "$OUTPUT_FILE"
 done
 
-# --- 4. FINAL CLEANUP (NEW STEP) ---
+# --- 4. FINAL CLEANUP ---
+CLEANUP_SCRIPT="./scripts/cleanup.sh"
 if [ -f "$CLEANUP_SCRIPT" ]; then
     echo "--- Running final cleanup script..."
     "$CLEANUP_SCRIPT"

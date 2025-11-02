@@ -3,9 +3,9 @@
  */
 function doGet(e) {
   return HtmlService.createTemplateFromFile('index')
-      .evaluate()
-      .setTitle('Polaris Agent Client')
-      .setSandboxMode(HtmlService.SandboxMode.IFRAME);
+       .evaluate()
+       .setTitle('Polaris Agent Client')
+       .setSandboxMode(HtmlService.SandboxMode.IFRAME);
 }
 
 /**

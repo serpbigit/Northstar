@@ -3,13 +3,13 @@
 <head>
     <base target="_top">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: https://ssl.gstatic.com; connect-src 'self' https://script.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline' https://ssl.gstatic.com; font-src https://fonts.gstatic.com;">
     <title>Polaris Agent Client</title>
     </head>
 <body>
     <div class="container">
         <h1>Polaris Agent Client</h1>
-
-        <h2>1. Initial Setup:</h2>
+        <p id="clientStatus">Client Status: Initializing...</p> <h2>1. Initial Setup:</h2>
         <p><button onclick="runInitialSetup()">Run Initial Sheet Setup</button></p>
         <hr>
 

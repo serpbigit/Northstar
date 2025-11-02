@@ -1,12 +1,27 @@
 <script>
+    console.log("Polaris Client Script Loaded.");
+    document.addEventListener('DOMContentLoaded', () => {
+        const status = document.getElementById('clientStatus');
+        if (status) {
+            status.textContent = "Client Status: Ready.";
+            console.log("Client Status element updated.");
+        }
+    });
+
     // Handler for the server-side response
     function showResponse(response) {
+        console.log("Received response:", response);
         const output = document.getElementById('output');
-        // Check for structured response {ok: bool, message: string}
-        if (response && response.ok !== undefined) {
+        
+        // This is the beginning of the interactive menu logic
+        if (response && response.type === "menu") {
+            // Future menu rendering logic goes here
+            output.innerHTML = "Interactive Menu received, rendering soon.";
+        } 
+        // Simple response handling
+        else if (response && response.ok !== undefined) {
              output.innerHTML = response.message;
         } else {
-             // Fallback for simple string response from routeUserQuery
              output.innerHTML = response;
         }
     }
@@ -17,20 +32,20 @@
         var text = input.value.trim();
         if (text) {
             document.getElementById('output').innerHTML = "🤖 Polaris is processing your request...";
-            // Call the server-side shim function (routeUserQuery)
+            console.log("Sending query:", text);
             google.script.run.withSuccessHandler(showResponse).routeUserQuery(text);
-            input.value = ''; // Clear the input after sending
+            input.value = '';
         }
     }
 
     // Handler for the initial setup button
     function runInitialSetup() {
         document.getElementById('output').innerHTML = "⚙️ Running initial sheet setup...";
-        // Call the server-side shim function (setupSheets)
+        console.log("Calling setupSheets...");
         google.script.run.withSuccessHandler(showResponse).setupSheets();
     }
     
-    // Optional: Allow sending query on Enter key press
+    // Allow sending query on Enter key press
     document.addEventListener('DOMContentLoaded', () => {
       const input = document.getElementById('userInput');
       if (input) {

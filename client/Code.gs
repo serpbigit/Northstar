@@ -11,15 +11,22 @@ function doGet(e) {
 
 /**
  * Public function called by the client to route user queries through the Polaris Core Library.
- * NOTE: This function would typically check for the existence of the requested command 
- * in a manifest sheet before delegating to the Core Library, if not found locally.
  */
 function routeUserQuery(text) {
-  // For testing prototype features, we will first check the local agent file.
-  if (text.startsWith('cmd_TestMenu_')) {
-    return cmd_TestMenu_(); // Call the local prototype function directly
+  const userEmail = Session.getActiveUser().getEmail();
+
+  // --- GATE BYPASS: ADMIN/PROTOTYPE COMMANDS (For Developer) ---
+  const ADMIN_EMAIL = 'reuven007@gmail.com'; 
+  if (userEmail === ADMIN_EMAIL && text.startsWith('cmd_TestMenu_')) {
+    
+    // Direct call to prototype function in the same project scope
+    if (typeof cmd_TestMenu_ === 'function') {
+        return cmd_TestMenu_();
+    }
   }
-  // All other commands delegate to the core library.
+
+  // --- STANDARD ROUTING DELEGATION ---
+  // All other commands delegate to the core library for full policy checking.
   return PolarisCore.routeUserQuery(text);
 }
 
@@ -34,14 +41,14 @@ function setupSheets() {
  * Public function to fetch a list of available handlers (commands) for UI suggestions.
  */
 function getSuggestedActions() {
+  // This function relies on the Core Library (PolarisCore) access.
   try {
     const helpResult = PolarisCore.cmd_Help_({}); 
     
     if (!helpResult.ok || typeof helpResult.message !== 'string') {
-        return { ok: false, message: helpResult.message || 'Help command returned error.' };
+        return { ok: false, message: helpResult.message || 'Error fetching available commands.' };
     }
 
-    // Parse the markdown list into a structured array for the UI
     const commands = helpResult.message.split('\n').slice(1).map(line => {
       const match = line.match(/^\s*• \*\*([\w-]+)\*\*: (.*)/);
       return match ? { key: match[1], description: match[2] } : null;

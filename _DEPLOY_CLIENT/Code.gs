@@ -2,16 +2,24 @@
  * Entry point to serve the HTML Web App client (index.html).
  */
 function doGet(e) {
+  // CRITICAL FIX: Using EMULATED mode for reliable rendering in GAS Web App IFRAME.
   return HtmlService.createTemplateFromFile('index')
        .evaluate()
        .setTitle('Polaris Agent Client')
-       .setSandboxMode(HtmlService.SandboxMode.IFRAME);
+       .setSandboxMode(HtmlService.SandboxMode.EMULATED);
 }
 
 /**
  * Public function called by the client to route user queries through the Polaris Core Library.
+ * NOTE: This function would typically check for the existence of the requested command 
+ * in a manifest sheet before delegating to the Core Library, if not found locally.
  */
 function routeUserQuery(text) {
+  // For testing prototype features, we will first check the local agent file.
+  if (text.startsWith('cmd_TestMenu_')) {
+    return cmd_TestMenu_(); // Call the local prototype function directly
+  }
+  // All other commands delegate to the core library.
   return PolarisCore.routeUserQuery(text);
 }
 
@@ -23,13 +31,12 @@ function setupSheets() {
 }
 
 /**
- * NEW: Public function to fetch a list of available handlers (commands) for UI suggestions.
+ * Public function to fetch a list of available handlers (commands) for UI suggestions.
  */
 function getSuggestedActions() {
   try {
-    const helpResult = PolarisCore.cmd_Help_({}); // Call the Core Library's help function directly
+    const helpResult = PolarisCore.cmd_Help_({}); 
     
-    // Check if the result is a failure object or text error
     if (!helpResult.ok || typeof helpResult.message !== 'string') {
         return { ok: false, message: helpResult.message || 'Help command returned error.' };
     }

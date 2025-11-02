@@ -83,3 +83,36 @@
         }
     }
 </style>
+
+<style>
+    /* New: Interactive Menu Styling */
+    .menu-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 15px;
+        padding-top: 10px;
+        border-top: 1px dashed #ccc;
+    }
+    .menu-button {
+        width: 100%;
+        padding: 10px;
+        background-color: #f0f8ff; /* Very light blue background */
+        color: #0d47a1;
+        border: 1px solid #bbdefb;
+        font-weight: normal;
+        text-align: left;
+        transition: background-color 0.2s;
+    }
+    .menu-button:hover {
+        background-color: #e3f2fd; /* Light blue on hover */
+        border-color: #0d47a1;
+    }
+    .menu-button:active {
+        background-color: #bbdefb;
+    }
+    /* Ensure existing button styles do not interfere */
+    button:not(.menu-button) {
+        /* Keep original primary button styling */
+    }
+</style>

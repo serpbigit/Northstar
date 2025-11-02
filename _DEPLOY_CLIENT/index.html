@@ -4,19 +4,22 @@
     <base target="_top">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Polaris Agent Client</title>
-    <style>
-        /* Styles content will be inserted here */
-    </style>
-</head>
+    </head>
 <body>
     <div class="container">
         <h1>Polaris Agent Client</h1>
-        <div id="output"></div>
-        <input type="text" id="userInput" placeholder="Ask Polaris..." />
-        <button onclick="sendQuery()">Send</button>
+
+        <h2>1. Initial Setup:</h2>
+        <p><button onclick="runInitialSetup()">Run Initial Sheet Setup</button></p>
+        <hr>
+
+        <h2>2. Chat with Polaris:</h2>
+        <div class="input-group">
+            <input type="text" id="userInput" placeholder="Ask Polaris (e.g., cmd_HandleSheetData_)" />
+            <button onclick="sendQuery()">Send</button>
+        </div>
+
+        <div id="output">Output will appear here...</div>
     </div>
-    <script>
-        // Scripts content will be inserted here
-    </script>
-</body>
+    </body>
 </html>

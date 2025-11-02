@@ -1,82 +1,44 @@
-// This file contains all the client-side JavaScript logic
+<script>
+    // Handler for the server-side response
+    function showResponse(response) {
+        const output = document.getElementById('output');
+        // Check for structured response {ok: bool, message: string}
+        if (response && response.ok !== undefined) {
+             output.innerHTML = response.message;
+        } else {
+             // Fallback for simple string response from routeUserQuery
+             output.innerHTML = response;
+        }
+    }
 
-document.addEventListener('DOMContentLoaded', (event) => {
-  loadSuggestedActions();
-});
+    // Main function to send user query
+    function sendQuery() {
+        var input = document.getElementById('userInput');
+        var text = input.value.trim();
+        if (text) {
+            document.getElementById('output').innerHTML = "🤖 Polaris is processing your request...";
+            // Call the server-side shim function (routeUserQuery)
+            google.script.run.withSuccessHandler(showResponse).routeUserQuery(text);
+            input.value = ''; // Clear the input after sending
+        }
+    }
 
-function showResponse(message, isError = false) {
-  const outputArea = document.getElementById('output-area');
-  // Use a simplified HTML rendering for bolding (**text**) if necessary
-  let formattedMessage = message.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-  outputArea.innerHTML += `<div class="${isError ? 'error-message' : 'agent-message'}">${formattedMessage}</div>`;
-  outputArea.scrollTop = outputArea.scrollHeight; // Scroll to bottom
-}
-
-function handleKeyPress(event) {
-  if (event.key === 'Enter') {
-    sendUserQuery();
-  }
-}
-
-function runInitialSheetSetup() {
-  showResponse('⚙️ Running initial sheet setup...', false);
-  google.script.run
-    .withSuccessHandler(function(response) {
-      showResponse(response);
-      loadSuggestedActions(); // Reload suggestions as sheets are ready
-    })
-    .withFailureHandler(function(error) {
-      showResponse(`⚠️ Error during setup: ${error.message}`, true);
-    })
-    .setupSheets();
-}
-
-function sendUserQuery(suggestion = null) {
-  const inputElement = document.getElementById('user-input');
-  const query = suggestion || inputElement.value;
-  if (!query.trim()) return;
-
-  showResponse(`👤 You: ${query}`);
-  inputElement.value = ''; // Clear input
-
-  google.script.run
-    .withSuccessHandler(function(response) {
-      showResponse(`🤖 Polaris: ${response}`);
-      // Simple logic: if the response indicates failure, reload suggestions for guidance
-      if (response.startsWith('⚠️')) {
-          loadSuggestedActions();
-      }
-    })
-    .withFailureHandler(function(error) {
-      showResponse(`⚠️ Error: ${error.message}`, true);
-      loadSuggestedActions();
-    })
-    .routeUserQuery(query);
-}
-
-function loadSuggestedActions() {
-  const suggestionButtonsDiv = document.getElementById('suggestion-buttons');
-  suggestionButtonsDiv.innerHTML = '<p class="loading-text">Loading...</p>';
-  
-  google.script.run
-    .withSuccessHandler(function(result) {
-      suggestionButtonsDiv.innerHTML = ''; // Clear loading
-      
-      if (result.ok && result.actions && result.actions.length > 0) {
-        result.actions.forEach(action => {
-          const button = document.createElement('button');
-          button.textContent = `⚡ ${action.key}`;
-          button.title = action.description;
-          button.onclick = () => sendUserQuery(action.key);
-          suggestionButtonsDiv.appendChild(button);
+    // Handler for the initial setup button
+    function runInitialSetup() {
+        document.getElementById('output').innerHTML = "⚙️ Running initial sheet setup...";
+        // Call the server-side shim function (setupSheets)
+        google.script.run.withSuccessHandler(showResponse).setupSheets();
+    }
+    
+    // Optional: Allow sending query on Enter key press
+    document.addEventListener('DOMContentLoaded', () => {
+      const input = document.getElementById('userInput');
+      if (input) {
+        input.addEventListener('keypress', function(e) {
+          if (e.key === 'Enter') {
+            sendQuery();
+          }
         });
-      } else {
-        // If system is not set up, show setup message
-        suggestionButtonsDiv.innerHTML = '<p class="error-text">System needs setup. Click "Run Initial Sheet Setup" first.</p>';
       }
-    })
-    .withFailureHandler(function(error) {
-      suggestionButtonsDiv.innerHTML = '<p class="error-text">Failed to connect to server.</p>';
-    })
-    .getSuggestedActions();
-}
+    });
+</script>

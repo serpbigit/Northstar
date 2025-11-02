@@ -132,7 +132,11 @@ function cmd_Help_(params) {
       return `• **${key}**: ${desc}`;
     }).join('\n');
 
-    return { ok: true, message: `Here's what I can do:\n${commands}` };
+    const message = commands
+      ? `Here's what I can do:\n${commands}`
+      : "ℹ️ No commands are currently available. Please configure the 'Handlers' sheet.";
+
+    return { ok: true, message: message };
   } catch (e) {
     log_('ERROR', 'cmd_Help_', { err: e.message });
     return { ok: false, message: '⚠️ Error getting help.' };
@@ -147,20 +151,21 @@ function cmd_GeneralChat_(params) {
   try {
     const text = params.text || '';
     const agentsTbl = readTable_(CFG_.DATAAGENTS_SHEET);
-    
-    let instructions = 'You are a helpful assistant.'; [cite_start]// Hardcoded fallback [cite: 84]
+    let instructions = '';
 
     if (agentsTbl.ok && agentsTbl.rows.length) {
       // Find the 'Default' agent (The Contextualist Agent)
       const defaultAgent = agentsTbl.rows.find(r => 
         String(r.agentName || r.AgentName || '').toLowerCase() === CFG_.DEFAULT_AGENT.toLowerCase()
       );
-      if (defaultAgent) {
-        const agentInstructions = defaultAgent.Instructions || defaultAgent.instructions;
-        if (agentInstructions) instructions = agentInstructions;
-      }
+      instructions = (defaultAgent && (defaultAgent.Instructions || defaultAgent.instructions)) || '';
     }
     
+    // If no instructions could be found, it's a configuration error.
+    if (!instructions) {
+      return { ok: false, message: `⚠️ Configuration Error: Could not load 'Default' agent persona from the ${CFG_.DATAAGENTS_SHEET} sheet.` };
+    }
+
     // Query 2: Call AI with the persona instructions
     const aiResult = callOpenAI_(instructions, text);
     if (!aiResult.ok) {

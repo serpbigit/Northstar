@@ -92,8 +92,17 @@ function callOpenAI_(systemPrompt, userText) {
 
     // 4. Handle non-200 HTTP errors
     if (httpCode !== 200) {
-      log_('ERROR', 'callOpenAI_', { httpCode, httpContent: httpContent.slice(0, 500) });
-      return { ok: false, error: `OpenAI API Error ${httpCode}: ${httpContent.slice(0, 500)}` };
+      let errorMessage = httpContent.slice(0, 500); // Default to raw slice
+      try {
+        // Attempt to parse the error for a cleaner message from the API
+        const errorJson = JSON.parse(httpContent);
+        if (errorJson.error && errorJson.error.message) {
+          errorMessage = errorJson.error.message;
+        }
+      } catch (e) { /* Ignore parse error, use the raw slice */ }
+      
+      log_('ERROR', 'callOpenAI_', { httpCode, errorMessage });
+      return { ok: false, error: `OpenAI API Error ${httpCode}: ${errorMessage}` };
     }
 
     // 5. Parse and return the successful response

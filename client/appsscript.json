@@ -1,0 +1,23 @@
+{
+  "timeZone": "Asia/Jerusalem",
+  "exceptionLogging": "STACKDRIVER",
+  "runtimeVersion": "V8",
+  "webApp": {
+    "access": "MYSELF", 
+    "executeAs": "USER_DEPLOYING"
+  },
+  "oauthScopes": [
+    "https://www.googleapis.com/auth/script.external_request",
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/userinfo.email" 
+  ],
+  "dependencies": {
+    "libraries": [
+      {
+        "userSymbol": "PolarisCore",
+        "libraryId": "AKfycbx1VIjna-Ql5XQgypuoE7H5EcxC6tJkb-Hk2Iuu4ER6ifX4PkoudKdKREXQFrodEgpn",
+        "version": "1"
+      }
+    ]
+  }
+}

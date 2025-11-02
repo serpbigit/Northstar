@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    /* Styles content will be inserted here */
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🤖 Polaris Agent Client</h1>
+
+    <div class="section">
+      <h2>1. Initial Setup</h2>
+      <button onclick="runInitialSheetSetup()">Run Initial Sheet Setup</button>
+    </div>
+
+    <div class="section chat-area">
+      <h2>2. Chat with Polaris</h2>
+      <div id="output-area" class="output-box">Output will appear here...</div>
+      
+      <div id="suggestions-area" class="suggestions-box">
+        <h3>Quick Actions / Suggestions</h3>
+        <div id="suggestion-buttons" class="button-group">
+          </div>
+      </div>
+
+      <div class="input-group">
+        <input type="text" id="user-input" placeholder="e.g. add milk to HomeErrands" onkeypress="handleKeyPress(event)">
+        <button onclick="sendUserQuery()">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  // Client-side JavaScript functions will be inserted here
+  </script>
+</body>
+</html>

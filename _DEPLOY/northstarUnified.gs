@@ -95,11 +95,9 @@ function appendRow_(sheetName, header, obj) {
 }
 /**
  * Helper function used by the LibraryInterface to resolve GAS functions dynamically.
- * *** FIX: Explicitly type 'this' to resolve TS2683 error ***
  */
 function resolveHandlerFn_(name) {
     const n = String(name || '');
-    // Check global scope using the explicitly typed 'this'
     if (typeof this[n] === 'function')
         return this[n];
     if (n.endsWith('_') && typeof this[n.slice(0, -1)] === 'function')
@@ -110,10 +108,11 @@ function resolveHandlerFn_(name) {
 }
 /**
  * Manually callable function to set up the minimal Polaris sheet structure.
+ * *** FIX: Removed SpreadsheetApp.getUi() for non-UI execution ***
  */
 function GoogleSheets_Setup() {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const ui = SpreadsheetApp.getUi();
+    // const ui: any = SpreadsheetApp.getUi(); <-- Removed UI dependency
     try {
         // 1. Create essential system sheets with their headers
         ensureSheet_(ss, CFG_.SETTINGS_SHEET, ['Key', 'Value']);
@@ -124,11 +123,16 @@ function GoogleSheets_Setup() {
             'ActionPlan_ID', 'User_ID', 'Created_TS', 'Status', 'Name',
             'Total_Steps', 'Current_Step_Idx', 'Execution_Log', 'Action_Plan_JSON'
         ]);
-        ui.alert('✅ Polaris Setup Complete!', 'All essential system sheets have been created and initialized.', ui.ButtonSet.OK);
+        // Replaced ui.alert() with Logger.log() for non-UI execution context
+        Logger.log('✅ Polaris Setup Complete! Sheets initialized.');
+        // Returning success message for the Web App client to display
+        return '✅ Polaris Setup Complete! All essential system sheets have been created.';
     }
     catch (e) {
         console.error('Setup Error: ' + e.message);
-        ui.alert('⚠️ Setup Failed', 'An error occurred during sheet creation: ' + e.message, ui.ButtonSet.OK);
+        Logger.log('⚠️ Setup Failed: ' + e.message);
+        // Return error message for the Web App client
+        return '⚠️ Setup Failed. Please check the Execution Log: ' + e.message;
     }
 }
 // ---------------------------------------------------------------------------------

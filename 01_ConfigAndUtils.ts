@@ -98,12 +98,10 @@ function appendRow_(sheetName: any, header: any, obj: any): any {
 
 /**
  * Helper function used by the LibraryInterface to resolve GAS functions dynamically.
- * *** FIX: Explicitly type 'this' to resolve TS2683 error ***
  */
 function resolveHandlerFn_(this: any, name: any): any {
   const n: any = String(name || '');
   
-  // Check global scope using the explicitly typed 'this'
   if (typeof this[n] === 'function') return this[n];
   if (n.endsWith('_') && typeof this[n.slice(0, -1)] === 'function') return this[n.slice(0, -1)];
   if (!n.endsWith('_') && typeof this[n + '_'] === 'function') return this[n + '_'];
@@ -112,10 +110,11 @@ function resolveHandlerFn_(this: any, name: any): any {
 
 /**
  * Manually callable function to set up the minimal Polaris sheet structure.
+ * *** FIX: Removed SpreadsheetApp.getUi() for non-UI execution ***
  */
 function GoogleSheets_Setup(): any {
   const ss: any = SpreadsheetApp.getActiveSpreadsheet();
-  const ui: any = SpreadsheetApp.getUi();
+  // const ui: any = SpreadsheetApp.getUi(); <-- Removed UI dependency
 
   try {
     // 1. Create essential system sheets with their headers
@@ -129,10 +128,16 @@ function GoogleSheets_Setup(): any {
       'Total_Steps', 'Current_Step_Idx', 'Execution_Log', 'Action_Plan_JSON'
     ]);
 
-    ui.alert('✅ Polaris Setup Complete!', 'All essential system sheets have been created and initialized.', ui.ButtonSet.OK);
+    // Replaced ui.alert() with Logger.log() for non-UI execution context
+    Logger.log('✅ Polaris Setup Complete! Sheets initialized.');
+
+    // Returning success message for the Web App client to display
+    return '✅ Polaris Setup Complete! All essential system sheets have been created.';
 
   } catch (e: any) {
     console.error('Setup Error: ' + e.message);
-    ui.alert('⚠️ Setup Failed', 'An error occurred during sheet creation: ' + e.message, ui.ButtonSet.OK);
+    Logger.log('⚠️ Setup Failed: ' + e.message);
+    // Return error message for the Web App client
+    return '⚠️ Setup Failed. Please check the Execution Log: ' + e.message;
   }
 }

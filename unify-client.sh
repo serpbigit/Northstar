@@ -22,25 +22,31 @@ echo "--- Starting HTML unification..."
 
 # Use a temporary file for intermediate processing
 TEMP_HTML="$DEPLOY_DIR/temp.html"
+
+# 2.1 Copy the base template
 cp "$INDEX_HTML_SOURCE" "$TEMP_HTML"
 
-# 2.1 Insert Styles content
-# Note: Requires placeholders in index.html
-sed -i.bak '// {
-    r '"$STYLES_HTML_SOURCE"'
-    d
-}' "$TEMP_HTML"
+# 2.2 Define the AWK command to perform inclusion
+# AWK is generally more reliable for multi-line file processing than sed.
 
-# 2.2 Insert Scripts content
-# Note: Requires placeholders in index.html
-sed -i.bak '// {
-    r '"$SCRIPTS_HTML_SOURCE"'
-    d
-}' "$TEMP_HTML"
+awk '
+  // {
+    # Replace placeholder with content of styles.html
+    while ((getline line < "'"$STYLES_HTML_SOURCE"'") > 0) print line;
+    close("'"$STYLES_HTML_SOURCE"'");
+    next;
+  }
+  // {
+    # Replace placeholder with content of scripts.html
+    while ((getline line < "'"$SCRIPTS_HTML_SOURCE"'") > 0) print line;
+    close("'"$SCRIPTS_HTML_SOURCE"'");
+    next;
+  }
+  { print }
+' "$TEMP_HTML" > "$OUTPUT_HTML"
 
-# 2.3 Move temporary file to final output location and clean up the backup file
-mv "$TEMP_HTML" "$OUTPUT_HTML"
-rm -f "$DEPLOY_DIR/temp.html.bak"
+# Clean up temporary file
+rm "$TEMP_HTML"
 
 # --- 3. COPY SERVER SHIM ARTIFACT (Code.gs) ---
 

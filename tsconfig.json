@@ -1,0 +1,34 @@
+{
+  "compilerOptions": {
+    // Target modern JavaScript compatible with GAS V8 runtime
+    "target": "ES2020",
+    
+    // Crucial: Apps Script runs as a single file, not with modules
+    "module": "None",
+    
+    // Include modern libraries
+    "lib": ["ES2020"],
+    
+    "strict": true,
+    "allowJs": true,
+    "checkJs": true,
+    
+    // Allows the editor to treat files as non-isolated for compilation/concatenation
+    "isolatedModules": false, 
+    
+    // Set the expected final output name for the linter (though your script does the concating)
+    "outFile": "dist/northstarUnified.js", 
+    
+    // Skips type checking for imported library definitions (reduces noise)
+    "skipLibCheck": true,
+    
+    // Includes Google Apps Script type definitions so global functions (like SpreadsheetApp) are recognized
+    "types": ["google-apps-script"]
+  },
+  "include": [
+    "./**/*.ts" // Include all your source files in the current directory and subdirectories
+  ],
+  "exclude": [
+    "./node_modules" // Exclude the node_modules directory
+  ]
+}

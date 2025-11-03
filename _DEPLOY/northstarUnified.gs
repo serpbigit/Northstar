@@ -4,556 +4,76 @@
 // FILE: northstarUnified.ts
 /* --- BLOCK START --- */
 // ---------------------------------------------------------------------------------
-// FILE: 01_ConfigAndUtils.ts
-// PURPOSE: Global configuration constants, logging, core Sheet utilities, and function resolver.
+// FILE: PolarisCore.ts
+// PURPOSE: Consolidated source for the Polaris Core Agent Library.
 // ---------------------------------------------------------------------------------
-// ========== Block#1 — CONFIG ==========
-/**
- * Global configuration constants for sheet names.
- */
+// === CONFIG & UTILITIES ===
 const CFG_ = {
     SETTINGS_SHEET: 'Settings',
     HANDLERS_SHEET: 'Handlers',
     DATAAGENTS_SHEET: 'DataAgents',
-    SHARED_POLICIES_SHEET: 'SharedPolicies',
     LOG_SHEET: 'Log',
     JOBS_QUEUE_SHEET: 'PendingActions',
     DEFAULT_AGENT: 'Default',
+    // New: Policy Sheet
+    POLICY_ACCESS_SHEET: 'UserAccess',
 };
-// ========== Block#2 — UTIL: Logging & Sheets ==========
 /**
- * Ensures a sheet exists and creates it with a header if missing.
+ * Global constant for the main database Spreadsheet ID.
+ * FIX: Hardcoded ID for the USER_POLICIES_SHEET.
  */
-function ensureSheet_(ss, name, header = []) {
-    let sh = ss.getSheetByName(name);
-    if (!sh) {
-        sh = ss.insertSheet(name);
-        if (header && header.length)
-            sh.getRange(1, 1, 1, header.length).setValues([header]);
-    }
-    return sh;
-}
+const GLOBAL_DB_ID = "1JKS0GGJCMSlLeSNP6lIQGBI4YzQIpgsMpX8JSJU1nak";
 /**
  * Centralized, structured execution and debugging log (Archivist Agent reliance).
  */
 function log_(level, evt, data) {
     try {
-        const row = [
-            new Date(),
-            level,
-            evt,
-            JSON.stringify(data || {}).slice(0, 3000)
-        ];
+        const row = [new Date(), level, evt, JSON.stringify(data || {}).slice(0, 3000)];
         const ss = SpreadsheetApp.getActiveSpreadsheet();
-        const sh = ensureSheet_(ss, CFG_.LOG_SHEET, ['ts', 'level', 'evt', 'details']);
+        const sh = ss.getSheetByName(CFG_.LOG_SHEET) || ss.insertSheet(CFG_.LOG_SHEET, 0);
         sh.appendRow(row);
     }
     catch (e) {
-        try {
-            console.error('log_ fail: ' + e.message);
-        }
-        catch (_) { }
+        console.error('log_ fail: ' + e.message);
     }
 }
 /**
  * Reads a sheet table, converting rows into an array of objects based on the header.
+ * FIX: Now opens the policy sheet by its hardcoded ID.
  */
 function readTable_(sheetName) {
     try {
-        const ss = SpreadsheetApp.getActiveSpreadsheet();
-        const sh = ensureSheet_(ss, sheetName);
-        const rng = sh.getDataRange();
-        const vals = rng.getValues();
-        if (vals.length < 1)
-            return { ok: true, header: [], rows: [] };
-        const header = vals[0].map((h) => String(h).trim());
+        // Use openById() to connect to the separate policy sheet
+        const ss = SpreadsheetApp.openById(GLOBAL_DB_ID);
+        const sh = ss.getSheetByName(sheetName);
+        if (!sh)
+            throw new Error("Sheet not found: " + sheetName);
+        const vals = sh.getDataRange().getValues();
         if (vals.length < 2)
-            return { ok: true, header, rows: [] };
+            return { ok: true, rows: [] };
+        const header = vals[0].map((h) => String(h).trim());
         const rows = vals.slice(1).map((r) => Object.fromEntries(header.map((h, i) => [h, r[i]])));
-        return { ok: true, header, rows };
+        return { ok: true, rows };
     }
     catch (e) {
         log_('ERROR', 'readTable_', { err: e.message, sheet: sheetName });
-        return { ok: false, error: e.message, header: [], rows: [] };
+        return { ok: false, error: e.message, rows: [] };
     }
 }
-/**
- * Appends an object's values to a sheet row based on a required header array.
- */
-function appendRow_(sheetName, header, obj) {
-    try {
-        const ss = SpreadsheetApp.getActiveSpreadsheet();
-        const sh = ensureSheet_(ss, sheetName, header);
-        const row = header.map((h) => obj[h] ?? '');
-        sh.appendRow(row);
-        return { ok: true };
-    }
-    catch (e) {
-        log_('ERROR', 'appendRow_', { err: e.message, sheet: sheetName, data: obj });
-        return { ok: false, error: e.message };
-    }
-}
-/**
- * Helper function used by the LibraryInterface to resolve GAS functions dynamically.
- */
-function resolveHandlerFn_(name) {
-    const n = String(name || '');
-    if (typeof this[n] === 'function')
-        return this[n];
-    if (n.endsWith('_') && typeof this[n.slice(0, -1)] === 'function')
-        return this[n.slice(0, -1)];
-    if (!n.endsWith('_') && typeof this[n + '_'] === 'function')
-        return this[n + '_'];
-    return null;
-}
-/**
- * Manually callable function to set up the minimal Polaris sheet structure.
- * *** FIX: Removed SpreadsheetApp.getUi() for non-UI execution ***
- */
-function GoogleSheets_Setup() {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    // const ui: any = SpreadsheetApp.getUi(); <-- Removed UI dependency
-    try {
-        // 1. Create essential system sheets with their headers
-        ensureSheet_(ss, CFG_.SETTINGS_SHEET, ['Key', 'Value']);
-        ensureSheet_(ss, CFG_.LOG_SHEET, ['ts', 'level', 'evt', 'details']);
-        ensureSheet_(ss, CFG_.HANDLERS_SHEET, ['HandlerKey', 'GAS_Function', 'Description']);
-        ensureSheet_(ss, CFG_.DATAAGENTS_SHEET, ['agentName', 'Instructions', 'TargetSheet']);
-        ensureSheet_(ss, CFG_.JOBS_QUEUE_SHEET, [
-            'ActionPlan_ID', 'User_ID', 'Created_TS', 'Status', 'Name',
-            'Total_Steps', 'Current_Step_Idx', 'Execution_Log', 'Action_Plan_JSON'
-        ]);
-        // Replaced ui.alert() with Logger.log() for non-UI execution context
-        Logger.log('✅ Polaris Setup Complete! Sheets initialized.');
-        // Returning success message for the Web App client to display
-        return '✅ Polaris Setup Complete! All essential system sheets have been created.';
-    }
-    catch (e) {
-        console.error('Setup Error: ' + e.message);
-        Logger.log('⚠️ Setup Failed: ' + e.message);
-        // Return error message for the Web App client
-        return '⚠️ Setup Failed. Please check the Execution Log: ' + e.message;
-    }
-}
-// ---------------------------------------------------------------------------------
-// FILE: 02_OpenAIClient.ts
-// PURPOSE: Handles settings retrieval and the secure external call to the OpenAI API.
-// ---------------------------------------------------------------------------------
-// NOTE: This file depends on CFG_, log_(), and readTable_() from 01_ConfigAndUtils.ts
-/**
- * Gets key-value pairs from the Settings sheet.
- * Caches settings for 10 minutes to reduce Sheet API calls.
- * @returns {object} {ok: true, settings: object} or {ok: false, error: string}
- */
-function getSettings_() {
-    try {
-        const cache = CacheService.getScriptCache();
-        const CACHE_KEY = 'polaris_settings';
-        const cached = cache.get(CACHE_KEY);
-        if (cached)
-            return { ok: true, settings: JSON.parse(cached) };
-        const tbl = readTable_(CFG_.SETTINGS_SHEET);
-        if (!tbl.ok || !tbl.rows.length) {
-            return { ok: false, error: 'Settings sheet is empty or unreadable.' };
-        }
-        // Assumes Settings sheet has 'Key' and 'Value' columns
-        const settings = tbl.rows.reduce((acc, row) => {
-            const k = row.Key || row.key;
-            const v = row.Value || row.value;
-            if (k)
-                acc[k] = v;
-            return acc;
-        }, {});
-        if (!settings.OPENAI_API_KEY || !settings.OPENAI_MODEL) {
-            log_('WARN', 'getSettings_', 'OPENAI_API_KEY or OPENAI_MODEL missing from Settings');
-        }
-        cache.put(CACHE_KEY, JSON.stringify(settings), 600);
-        return { ok: true, settings };
-    }
-    catch (e) {
-        log_('ERROR', 'getSettings_', { err: e.message });
-        return { ok: false, error: e.message };
-    }
-}
-/**
- * Calls the OpenAI Chat Completions API using UrlFetchApp.
- * @param {string} systemPrompt The system-level instruction for the AI.
- * @param {string} userText The user's input text.
- * @returns {object} {ok: true, response: string} or {ok: false, error: string}
- */
-function callOpenAI_(systemPrompt, userText) {
-    try {
-        // 1. Get API Key and Model from settings
-        const settingsData = getSettings_();
-        if (!settingsData.ok) {
-            return { ok: false, error: `Failed to get settings: ${settingsData.error}` };
-        }
-        const { OPENAI_API_KEY, OPENAI_MODEL } = settingsData.settings;
-        if (!OPENAI_API_KEY || !OPENAI_MODEL) {
-            return { ok: false, error: 'OPENAI_API_KEY or OPENAI_MODEL is not set in the Settings sheet.' };
-        }
-        // 2. Prepare the HTTP request payload and options
-        const url = 'https://api.openai.com/v1/chat/completions';
-        const payload = {
-            model: OPENAI_MODEL,
-            messages: [
-                { role: 'system', content: systemPrompt },
-                { role: 'user', content: userText }
-            ],
-            max_tokens: 1024,
-            temperature: 0.7,
-        };
-        const options = {
-            method: 'post',
-            contentType: 'application/json',
-            headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}` },
-            payload: JSON.stringify(payload),
-            muteHttpExceptions: true,
-        };
-        // 3. Execute the external request
-        const httpResponse = UrlFetchApp.fetch(url, options);
-        const httpCode = httpResponse.getResponseCode();
-        const httpContent = httpResponse.getContentText();
-        // 4. Handle non-200 HTTP errors
-        if (httpCode !== 200) {
-            log_('ERROR', 'callOpenAI_', { httpCode, httpContent: httpContent.slice(0, 500) });
-            return { ok: false, error: `OpenAI API Error ${httpCode}: ${httpContent.slice(0, 500)}` };
-        }
-        // 5. Parse and return the successful response
-        const json = JSON.parse(httpContent);
-        const responseText = json.choices[0].message.content.trim();
-        return { ok: true, response: responseText };
-    }
-    catch (e) {
-        log_('ERROR', 'callOpenAI_', { err: e.message });
-        return { ok: false, error: e.message };
-    }
-}
-// ---------------------------------------------------------------------------------
-// FILE: 03_CoreAgents.ts
-// PURPOSE: Contains the Router (Query 1) and Core Cognitive Agent specialists.
-// NOTE: This file depends on files 01, 02, and 05 (MonetizationGate).
-// ---------------------------------------------------------------------------------
-// ========== Block#3 — NLP Router (Query 1 - AI Powered) ==========
-/**
- * Caches the handler manifest (from Handlers sheet) for 10 mins.
- */
-function getHandlerManifest_() {
-    try {
-        const cache = CacheService.getScriptCache();
-        const CACHE_KEY = 'polaris_handlers';
-        const cached = cache.get(CACHE_KEY);
-        if (cached)
-            return { ok: true, handlers: JSON.parse(cached) };
-        const tbl = readTable_(CFG_.HANDLERS_SHEET);
-        if (!tbl.ok || !tbl.rows.length) {
-            return { ok: false, error: 'Handlers sheet is empty or unreadable.' };
-        }
-        const handlers = tbl.rows.map((r) => ({
-            key: r.HandlerKey || r.name,
-            fn: r.GAS_Function || r.fnName,
-            desc: r.Description || r.description,
-        })).filter((h) => h.key && h.fn);
-        if (!handlers.length) {
-            return { ok: false, error: 'No valid handlers found in Handlers sheet.' };
-        }
-        cache.put(CACHE_KEY, JSON.stringify(handlers), 600);
-        return { ok: true, handlers: handlers, handlerKeys: handlers.map((h) => h.key) };
-    }
-    catch (e) {
-        log_('ERROR', 'getHandlerManifest_', { err: e.message });
-        return { ok: false, error: e.message };
-    }
-}
-/**
- * AI-Powered Router (Query 1).
- * @param {string} text The user's input query.
- * @returns {object} {ok: true, handler: string, handlerKey: string} or {ok: false, reason: string, err: string}
- */
-function nlpPickCommand_(text) {
-    try {
-        if (text.trim().startsWith('IACP:')) {
-            log_('INFO', 'nlpPickCommand_IACP', { status: 'STUB_BYPASS' });
-        }
-        const manifest = getHandlerManifest_();
-        if (!manifest.ok) {
-            return { ok: false, reason: 'handlers-not-found', err: manifest.error };
-        }
-        const toolList = manifest.handlers.map((h) => `HandlerKey: ${h.key}\nDescription: ${h.desc}`).join('\n---\n');
-        const systemPrompt = `You are a "Query 1" router.
-Your ONLY job is to analyze the user's text and choose the single best HandlerKey from the provided list.
-You must respond with ONLY the chosen HandlerKey and nothing else.
-If you cannot find a good match, you MUST respond with "general_chat".
-
-Here is the list of available handlers:
-${toolList}`;
-        const aiResult = callOpenAI_(systemPrompt, text);
-        if (!aiResult.ok) {
-            log_('ERROR', 'nlpPickCommand_AI_call', { err: aiResult.error });
-            return { ok: false, reason: 'router-ai-error', err: aiResult.error };
-        }
-        const chosenHandlerKey = aiResult.response.trim().replace(/[."']/g, '');
-        const chosenHandler = manifest.handlers.find((h) => h.key === chosenHandlerKey);
-        if (!chosenHandler) {
-            log_('WARN', 'nlpPickCommand_AI_mismatch', {
-                text: text,
-                chosenKey: chosenHandlerKey
-            });
-            const generalChatHandler = manifest.handlers.find((h) => h.key === 'general_chat');
-            if (generalChatHandler) {
-                return { ok: true, handler: generalChatHandler.fn, handlerKey: 'general_chat', debug: { chosenKey: 'general_chat (fallback)' } };
-            }
-            return { ok: false, reason: 'no-match', err: `AI returned invalid key: ${chosenHandlerKey}` };
-        }
-        return { ok: true, handler: chosenHandler.fn, handlerKey: chosenHandler.key, debug: { chosenKey: chosenHandlerKey } };
-    }
-    catch (e) {
-        log_('ERROR', 'nlpPickCommand_', { err: e.message });
-        return { ok: false, reason: 'router-exception', err: e.message };
-    }
-}
-// ========== Block#4 — Core Specialists (Help, Chat, Search) ==========
-/**
- * Handles 'help' requests. Dynamically lists available handlers.
- */
-function cmd_Help_(params) {
-    try {
-        const tbl = readTable_(CFG_.HANDLERS_SHEET);
-        if (!tbl.ok || !tbl.rows.length) {
-            return { ok: false, message: '⚠️ Cannot read handlers from sheet.' };
-        }
-        const commands = tbl.rows.map((r) => {
-            const key = r.HandlerKey || r.name;
-            const desc = r.Description || r.description || 'No description.';
-            return `• **${key}**: ${desc}`;
-        }).join('\n');
-        return { ok: true, message: `Here's what I can do:\n${commands}` };
-    }
-    catch (e) {
-        log_('ERROR', 'cmd_Help_', { err: e.message });
-        return { ok: false, message: '⚠️ Error getting help.' };
-    }
-}
-/**
- * Handles 'general_chat' requests using Query 2 (OpenAI).
- */
-function cmd_GeneralChat_(params) {
-    try {
-        const text = params.text || '';
-        const agentsTbl = readTable_(CFG_.DATAAGENTS_SHEET);
-        let instructions = 'You are a helpful assistant.';
-        if (agentsTbl.ok && agentsTbl.rows.length) {
-            const defaultAgent = agentsTbl.rows.find((r) => String(r.agentName || r.AgentName || '').toLowerCase() === CFG_.DEFAULT_AGENT.toLowerCase());
-            if (defaultAgent) {
-                const agentInstructions = defaultAgent.Instructions || defaultAgent.instructions;
-                if (agentInstructions)
-                    instructions = agentInstructions;
-            }
-        }
-        const aiResult = callOpenAI_(instructions, text);
-        if (!aiResult.ok) {
-            return { ok: false, message: `⚠️ AI Error: ${aiResult.error}` };
-        }
-        return { ok: true, message: aiResult.response };
-    }
-    catch (e) {
-        log_('ERROR', 'cmd_GeneralChat_', { err: e.message });
-        return { ok: false, message: '⚠️ General chat error.' };
-    }
-}
-/**
- * STUB for 'handle_web_search'.
- */
-function cmd_HandleWebSearch_(params) {
-    return {
-        ok: false,
-        message: '🤖 Web search is not implemented yet. We need to add a Search API first.'
-    };
-}
-// ---------------------------------------------------------------------------------
-// FILE: 04_SwarmSpecialists.ts
-// PURPOSE: Contains all Domain Swarm Agents (execution logic for external APIs).
-// NOTE: This file depends on files 01 and 02.
-// ---------------------------------------------------------------------------------
-// ========== Specialist: Sheets (CRUD operations) ==========
-/**
- * Helper to find a data agent configuration row by name from the DataAgents sheet.
- * @param {string} agentName The name of the agent to look up.
- * @param {object[]} agentsTblRows The rows from the DataAgents sheet.
- * @returns {object | undefined} The agent configuration row.
- */
-function getAgentRowByName_(agentName, agentsTblRows) {
-    const n = String(agentName || '').toLowerCase();
-    return agentsTblRows.find((r) => String(r.agentName || r.AgentName || '').toLowerCase() === n);
-}
-/**
- * Handles sheet data manipulation commands ("add X to List" or "list List").
- * @param {object} params Object containing {text: string} and {userId: string}.
- * @returns {object} {ok: boolean, message: string}
- */
-function cmd_HandleSheetData_(params) {
-    try {
-        const text = params.text || '';
-        const addMatch = text.match(/add\s+(.*)\s+to\s+([\w-]+)/i);
-        const listMatch = text.match(/list\s+([\w-]+)/i);
-        const agentsTbl = readTable_(CFG_.DATAAGENTS_SHEET).rows || [];
-        if (addMatch) {
-            const item = addMatch[1].trim();
-            const agent = addMatch[2].trim();
-            const row = getAgentRowByName_(agent, agentsTbl);
-            const sheetName = row ? (row.sheetName || row.SheetName || agent) : agent;
-            const header = ['ts', 'item'];
-            appendRow_(sheetName, header, { ts: new Date(), item });
-            return { ok: true, message: `✅ Added to ${sheetName}: ${item}` };
-        }
-        if (listMatch) {
-            const agent = listMatch[1].trim();
-            const row = getAgentRowByName_(agent, agentsTbl);
-            const sheetName = row ? (row.sheetName || row.SheetName || agent) : agent;
-            const tbl = readTable_(sheetName);
-            const items = (tbl.rows || []).map((r) => `• ${r.item || JSON.stringify(r)}`).slice(0, 20);
-            return { ok: true, message: items.length ?
-                    `📋 ${sheetName}\n` + items.join('\n') : `📭 No items in ${sheetName}.`
-            };
-        }
-        return {
-            ok: false,
-            message: `I can add/list items.\nTry: 'add milk to HomeErrands' or 'list HomeErrands'`
-        };
-    }
-    catch (e) {
-        log_('ERROR', 'cmd_HandleSheetData_', { err: e.message });
-        return { ok: false, message: '⚠️ Sheet handler error.' };
-    }
-}
-// ========== Specialist: Gmail (Read/Draft Helpers) ==========
-/**
- * Helper function to read Gmail threads based on a query.
- */
-function gmail_read_(query, count) {
-    try {
-        const num = Math.min(Math.max(parseInt(count) || 3, 1), 10);
-        const threads = GmailApp.search(query, 0, num);
-        if (!threads.length) {
-            return { ok: true, message: `📭 No emails found for query: "${query}"` };
-        }
-        const summaries = threads.map((t) => {
-            const firstMsg = t.getMessages()[0];
-            const subject = t.getFirstMessageSubject();
-            const from = firstMsg.getFrom().split('<')[0].trim();
-            return `• *${subject}* (from ${from})`;
-        });
-        return {
-            ok: true,
-            message: `Found ${summaries.length} emails:\n${summaries.join('\n')}`
-        };
-    }
-    catch (e) {
-        log_('ERROR', 'gmail_read_', { err: e.message, query });
-        return { ok: false, message: `⚠️ Error reading emails: ${e.message}` };
-    }
-}
-/**
- * Helper function to create a Gmail draft.
- */
-function gmail_draft_(to, subject, body) {
-    try {
-        if (!to || !subject || !body) {
-            return { ok: false, message: `⚠️ AI failed to provide to, subject, or body.` };
-        }
-        const draft = GmailApp.createDraft(to, subject, body);
-        return {
-            ok: true,
-            message: `✅ Draft created successfully.\n**To:** ${to}\n**Subject:** ${subject}\n\nI have saved this in your Drafts folder for you to review and send.`
-        };
-    }
-    catch (e) {
-        log_('ERROR', 'gmail_draft_', { err: e.message });
-        return { ok: false, message: `⚠️ Error creating draft: ${e.message}` };
-    }
-}
-/**
- * Handles 'handle_gmail' requests using Query 2 (OpenAI).
- */
-function cmd_HandleGmail_(params) {
-    try {
-        const text = params.text || '';
-        // 1. Define the System Prompt for the Gmail Specialist (Query 2)
-        const systemPrompt = `You are a "Query 2" Gmail specialist.
-Your ONLY job is to convert the user's request into a single, valid JSON command.
-You must choose one of the following actions: "read" or "draft".
-
-1.  **"read" action**: Use for any request to find, list, or read emails.
-    Example: {"action": "read", "query": "from:bob@acme.com in:inbox", "count": 5}
-
-2.  **"draft" action**: Use for any request to write, compose, or draft an email.
-    Example: {"action": "draft", "to": "sales@acme.com", "subject": "New PO #12345", "body": "Hello,\n\nPlease find attached PO #12345.\n\nBest,"}
-
-Respond with ONLY the JSON object and nothing else.`;
-        // 2. Call OpenAI (Query 2)
-        const aiResult = callOpenAI_(systemPrompt, text);
-        if (!aiResult.ok) {
-            return { ok: false, message: `⚠️ AI Error (Query 2): ${aiResult.error}` };
-        }
-        // 3. Parse the AI's JSON command
-        let cmd;
-        try {
-            const jsonString = aiResult.response.replace(/```json\n|```/g, '').trim();
-            cmd = JSON.parse(jsonString);
-        }
-        catch (e) {
-            log_('ERROR', 'cmd_HandleGmail_json_parse', { response: aiResult.response, err: e.message });
-            return { ok: false, message: `⚠️ AI returned invalid JSON: ${aiResult.response}` };
-        }
-        // 4. Execute the command
-        log_('INFO', 'cmd_HandleGmail_cmd', { cmd });
-        switch (cmd.action) {
-            case 'read':
-                return gmail_read_(cmd.query, cmd.count);
-            case 'draft':
-                return gmail_draft_(cmd.to, cmd.subject, cmd.body);
-            default:
-                return { ok: false, message: `⚠️ AI returned an unknown action: ${cmd.action}` };
-        }
-    }
-    catch (e) {
-        log_('ERROR', 'cmd_HandleGmail_', { err: e.message });
-        return { ok: false, message: '⚠️ Gmail handler error.' };
-    }
-}
-// ========== Specialist: Calendar (Stub) ==========
-function cmd_HandleCalendar_(params) {
-    return { ok: true, message: `📅 CALENDAR STUB: I will soon handle: "${params.text || ''}".` };
-}
-// ========== Specialist: Tasks (Stub) ==========
-function cmd_HandleTasks_(params) {
-    return { ok: true, message: `✅ TASKS STUB: I will soon handle: "${params.text || ''}".` };
-}
-// ========== Specialist: Drive (Stub for Future Expansion) ==========
-function cmd_HandleDrive_(params) {
-    return { ok: true, message: `☁️ DRIVE STUB: I will soon handle Drive requests: "${params.text || ''}".` };
-}
-// ---------------------------------------------------------------------------------
-// FILE: 05_GuardianAgent.ts
-// PURPOSE: Implements the Guardian Agent's policy logic using the UserAccess sheet.
-// ---------------------------------------------------------------------------------
-const POLICY_SHEET_NAME = "UserAccess"; // Matches your new sheet name
+// === GUARDIAN AGENT (Policy Enforcement) ===
 const ADMIN_EMAIL_POLICY = "ADMIN";
 const ADMIN_HANDLER_WILDCARD = "*";
 /**
  * Guardian Agent: Retrieves user policy record from the UserAccess sheet.
  */
-function Guardian_getUserPolicy_(userEmail) {
+function Guardian_getUserPolicy(userEmail) {
     try {
-        // Assume CFG_ and readTable_ are available globally
-        const tbl = readTable_(POLICY_SHEET_NAME); // Reads the new UserAccess sheet
+        const tbl = readTable_(CFG_.POLICY_ACCESS_SHEET);
         if (!tbl.ok)
             return { accessLevel: 'FREE', allowedHandlers: [] };
-        // Cast to an array of objects where we expect User_Email and Allowed_Handlers
         const userRow = tbl.rows.find((r) => r.User_Email === userEmail);
-        if (!userRow) {
+        if (!userRow)
             return { accessLevel: 'FREE', allowedHandlers: [] };
-        }
         // Parse handlers from JSON string in the sheet cell
         const handlers = JSON.parse(userRow.Allowed_Handlers || '[]');
         return {
@@ -561,9 +81,8 @@ function Guardian_getUserPolicy_(userEmail) {
             allowedHandlers: handlers
         };
     }
-    catch (e) { // Use unknown for safety, then cast to Error
-        log_('ERROR', 'Guardian_getUserPolicy_', { err: e.message });
-        // Fail open for the admin developer during testing if sheet fails
+    catch (e) {
+        log_('ERROR', 'Guardian_getUserPolicy', { err: e.message });
         if (userEmail === 'reuven007@gmail.com') {
             return { accessLevel: ADMIN_EMAIL_POLICY, allowedHandlers: [ADMIN_HANDLER_WILDCARD] };
         }
@@ -572,10 +91,9 @@ function Guardian_getUserPolicy_(userEmail) {
 }
 /**
  * Guardian Agent: Main function to check user access before running a handler.
- * @returns {object} {ok: boolean, message?: string}
  */
-function Guardian_checkAccess_(userEmail, handlerKey) {
-    const policy = Guardian_getUserPolicy_(userEmail);
+function Guardian_checkAccess(userEmail, handlerKey) {
+    const policy = Guardian_getUserPolicy(userEmail);
     if (policy.accessLevel === ADMIN_EMAIL_POLICY || policy.allowedHandlers.includes(ADMIN_HANDLER_WILDCARD)) {
         return { ok: true };
     }
@@ -585,6 +103,59 @@ function Guardian_checkAccess_(userEmail, handlerKey) {
     return {
         ok: false,
         message: `Access Denied: The handler '${handlerKey}' requires a subscription upgrade.`
+    };
+}
+// === CORE ROUTER & EXECUTION (STUBS) ===
+function nlpPickCommand_(text) {
+    // STUB: This is a simplified version for local testing.
+    if (text.toLowerCase() === 'help') {
+        return { ok: true, handler: 'cmd_Help_', handlerKey: 'cmd_Help_' };
+    }
+    if (text.startsWith('cmd_TestMenu_')) {
+        return { ok: true, handler: 'cmd_TestMenu_', handlerKey: 'cmd_TestMenu_' };
+    }
+    return { ok: false, reason: 'no-match' };
+}
+/**
+ * Public entry point for the Polaris Client Project (Web App) via google.script.run.
+ */
+function routeUserQuery(text) {
+    try {
+        const userId = Session.getActiveUser().getEmail();
+        const routerResult = nlpPickCommand_(text);
+        if (!routerResult.ok) {
+            return `⚠️ Router Fail: ${routerResult.reason || 'Unknown routing error'}`;
+        }
+        const accessCheck = Guardian_checkAccess(userId, routerResult.handlerKey);
+        if (!accessCheck.ok) {
+            log_('WARN', 'routeUserQuery_AccessDenied', { userId: userId, key: routerResult.handlerKey });
+            return `⚠️ ${accessCheck.message}`;
+        }
+        const handlerFn = routerResult.handler;
+        // FIX: If the handler is cmd_Help_ we call the function directly.
+        if (handlerFn === 'cmd_Help_') {
+            return cmd_Help_({});
+        }
+        // Final Execution: Dynamic function call using type assertion to bypass TS7053
+        // We trust the handlerFn string points to a globally available GAS function.
+        const fn = globalThis[handlerFn];
+        if (typeof fn === 'function') {
+            return fn({ text: text, userId: userId });
+        }
+        return { ok: false, message: `⚠️ Internal Error: Handler function '${handlerFn}' not found.` };
+    }
+    catch (e) {
+        log_('FATAL', 'routeUserQuery_Exception', { err: e.message });
+        return '⚠️ Critical Error: An unexpected exception occurred.';
+    }
+}
+// === CORE SPECIALISTS (Mock for Test) ===
+function cmd_Help_(params) {
+    return {
+        ok: true,
+        message: `Here's what I can do (Access Granted!):
+• **cmd_Help_**: Lists available commands.
+• **cmd_TestMenu_**: Tests the interactive menu.`
     };
 }
 /* --- BLOCK END --- */

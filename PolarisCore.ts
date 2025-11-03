@@ -127,6 +127,9 @@ function nlpPickCommand_(text: string): any {
     return { ok: false, reason: 'no-match' }; 
 }
 
+/**
+ * Public entry point for the Polaris Client Project (Web App) via google.script.run.
+ */
 function routeUserQuery(text: string): any {
     try {
         const userId: string = Session.getActiveUser().getEmail();
@@ -144,12 +147,21 @@ function routeUserQuery(text: string): any {
         
         const handlerFn: string = routerResult.handler;
         
+        // FIX: If the handler is cmd_Help_ we call the function directly.
         if (handlerFn === 'cmd_Help_') {
             return cmd_Help_({});
         }
 
-        // Final Execution (Assumes function exists in project scope)
-        return globalThis[handlerFn]({text: text, userId: userId});
+        // Final Execution: Dynamic function call using type assertion to bypass TS7053
+        // We trust the handlerFn string points to a globally available GAS function.
+        const fn = globalThis[handlerFn as keyof typeof globalThis] as ((params: any) => any) | undefined;
+
+        if (typeof fn === 'function') {
+            return fn({text: text, userId: userId});
+        }
+        
+        return { ok: false, message: `⚠️ Internal Error: Handler function '${handlerFn}' not found.` };
+
 
     } catch (e: unknown) {
         log_('FATAL', 'routeUserQuery_Exception', { err: (e as Error).message });

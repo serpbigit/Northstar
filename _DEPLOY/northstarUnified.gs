@@ -534,91 +534,57 @@ function cmd_HandleDrive_(params) {
     return { ok: true, message: `☁️ DRIVE STUB: I will soon handle Drive requests: "${params.text || ''}".` };
 }
 // ---------------------------------------------------------------------------------
-// FILE: 05_MonetizationGate.ts
-// PURPOSE: Handles external subscription and tier checking for the Guardian Agent.
-// NOTE: This file depends on CFG_ and log_() from 01_ConfigAndUtils.ts
+// FILE: 05_GuardianAgent.ts
+// PURPOSE: Implements the Guardian Agent's policy logic using the UserAccess sheet.
 // ---------------------------------------------------------------------------------
+const POLICY_SHEET_NAME = "UserAccess"; // Matches your new sheet name
+const ADMIN_EMAIL_POLICY = "ADMIN";
+const ADMIN_HANDLER_WILDCARD = "*";
 /**
- * STUB: Connects to the external service/API to retrieve the user's tier
- * and their allowed services for policy enforcement.
- * * @param {string} userId The email address of the active user.
- * @returns {object} { tier: 'FREE'|'PAID_BASIC'|'PAID_PREMIUM', subscribedServices: string[] }
+ * Guardian Agent: Retrieves user policy record from the UserAccess sheet.
  */
-function checkSubscriptionStatus_(userId) {
-    // Log the call for future auditing
-    log_('INFO', 'checkSubscriptionStatus_', { user: userId, action: 'External API Call STUB' });
-    // --- STUB IMPLEMENTATION ---
-    const FREE_TIER_SERVICES = ['general_chat', 'sheets'];
-    if (userId.includes('premium.user')) {
-        return { tier: 'PAID_PREMIUM', subscribedServices: ['calendar', 'gmail', 'tasks', 'sheets', 'general_chat', 'web_search'] };
-    }
-    // Default to FREE tier
-    return { tier: 'FREE', subscribedServices: FREE_TIER_SERVICES };
-}
-/**
- * Checks if a requested service (HandlerKey) is enabled for the user's subscription tier.
- * Used by the Guardian Agent before executing a command.
- * * @param {string} userId The user's ID.
- * @param {string} handlerKey The requested service key (e.g., 'handle_calendar').
- * @returns {boolean} True if the service is enabled, false otherwise.
- */
-function isServiceEnabled_(userId, handlerKey) {
-    const status = checkSubscriptionStatus_(userId);
-    const key = handlerKey.toLowerCase();
-    if (status.tier === 'PAID_PREMIUM')
-        return true;
-    return status.subscribedServices.includes(key);
-}
-// ---------------------------------------------------------------------------------
-// FILE: 06_LibraryInterface.ts
-// PURPOSE: Defines the single public-facing function for the Client Project to call.
-// This function implements the full execution pipeline (Router -> Guardian -> Executive).
-// ---------------------------------------------------------------------------------
-/**
- * Public entry point for the Polaris Client Project (Web App) via google.script.run.
- * @param {string} text The user's input query.
- * @returns {string} The final response message for the UI.
- */
-function routeUserQuery(text) {
+function Guardian_getUserPolicy_(userEmail) {
     try {
-        // 1. Get the current user's ID
-        const userId = Session.getActiveUser().getEmail();
-        // 2. Route the query (Query 1) to determine the correct agent (Router Agent)
-        const routeResult = nlpPickCommand_(text);
-        log_('INFO', 'routeUserQuery_decision', {
-            text: text,
-            decision: routeResult.ok ? routeResult.debug : routeResult
-        });
-        if (!routeResult.ok) {
-            log_('ERROR', 'routeUserQuery_RouteFail', { err: routeResult.reason || 'Unknown routing error' });
-            const userErr = routeResult.reason === 'no-match' ? `🤖 Echo: ${text}` : `Router error: ${routeResult.reason}`;
-            return `⚠️ Router Fail: ${userErr}`;
+        // Assume CFG_ and readTable_ are available globally
+        const tbl = readTable_(POLICY_SHEET_NAME); // Reads the new UserAccess sheet
+        if (!tbl.ok)
+            return { accessLevel: 'FREE', allowedHandlers: [] };
+        // Cast to an array of objects where we expect User_Email and Allowed_Handlers
+        const userRow = tbl.rows.find((r) => r.User_Email === userEmail);
+        if (!userRow) {
+            return { accessLevel: 'FREE', allowedHandlers: [] };
         }
-        // 3. Check for subscription/policy (Guardian Agent's role)
-        if (!isServiceEnabled_(userId, routeResult.handlerKey)) {
-            log_('WARN', 'routeUserQuery_AccessDenied', { userId: userId, key: routeResult.handlerKey });
-            return `⚠️ Access Denied: The **${routeResult.handlerKey}** service requires a subscription upgrade.`;
-        }
-        // 4. Resolve the handler function (Executive Agent's role)
-        const fn = resolveHandlerFn_(routeResult.handler);
-        if (!fn) {
-            log_('ERROR', 'routeUserQuery_FnNotFound', { key: routeResult.handler });
-            return `⚠️ Internal Error: Handler function not found: ${routeResult.handler}`;
-        }
-        // 5. Execute the specialist (Query 2)
-        const out = fn({ text, userId });
-        // 6. Return the result
-        return (out && out.message) || JSON.stringify(out);
+        // Parse handlers from JSON string in the sheet cell
+        const handlers = JSON.parse(userRow.Allowed_Handlers || '[]');
+        return {
+            accessLevel: userRow.Access_Level || 'FREE',
+            allowedHandlers: handlers
+        };
     }
-    catch (e) {
-        log_('FATAL', 'routeUserQuery_Exception', { err: e.message, stack: e.stack });
-        return '⚠️ Critical Error: An unexpected exception occurred while processing your request.';
+    catch (e) { // Use unknown for safety, then cast to Error
+        log_('ERROR', 'Guardian_getUserPolicy_', { err: e.message });
+        // Fail open for the admin developer during testing if sheet fails
+        if (userEmail === 'reuven007@gmail.com') {
+            return { accessLevel: ADMIN_EMAIL_POLICY, allowedHandlers: [ADMIN_HANDLER_WILDCARD] };
+        }
+        return { accessLevel: 'FREE', allowedHandlers: [] };
     }
 }
 /**
- * Public entry point for initial setup, callable via google.script.run or from the native editor.
+ * Guardian Agent: Main function to check user access before running a handler.
+ * @returns {object} {ok: boolean, message?: string}
  */
-function setupPolarisSheets() {
-    return GoogleSheets_Setup();
+function Guardian_checkAccess_(userEmail, handlerKey) {
+    const policy = Guardian_getUserPolicy_(userEmail);
+    if (policy.accessLevel === ADMIN_EMAIL_POLICY || policy.allowedHandlers.includes(ADMIN_HANDLER_WILDCARD)) {
+        return { ok: true };
+    }
+    if (policy.allowedHandlers.includes(handlerKey)) {
+        return { ok: true };
+    }
+    return {
+        ok: false,
+        message: `Access Denied: The handler '${handlerKey}' requires a subscription upgrade.`
+    };
 }
 /* --- BLOCK END --- */

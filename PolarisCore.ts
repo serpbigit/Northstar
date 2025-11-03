@@ -1,7 +1,6 @@
 // ---------------------------------------------------------------------------------
 // FILE: PolarisCore.ts
 // PURPOSE: Consolidated source for the Polaris Core Agent Library.
-// Includes Config, Utilities, Guardian Policy, Router, and Specialists.
 // ---------------------------------------------------------------------------------
 // === CONFIG & UTILITIES ===
 const CFG_ = {
@@ -12,8 +11,14 @@ const CFG_ = {
     JOBS_QUEUE_SHEET: 'PendingActions',
     DEFAULT_AGENT: 'Default',
     // New: Policy Sheet
-    POLICY_ACCESS_SHEET: 'UserAccess', 
+    POLICY_ACCESS_SHEET: 'UserAccess',
 };
+
+/**
+ * Global constant for the main database Spreadsheet ID.
+ * FIX: Hardcoded ID for the USER_POLICIES_SHEET.
+ */
+const GLOBAL_DB_ID: string = "1JKS0GGJCMSlLeSNP6lIQGBI4YzQIpgsMpX8JSJU1nak";
 
 /**
  * Centralized, structured execution and debugging log (Archivist Agent reliance).
@@ -29,11 +34,14 @@ function log_(level: string, evt: string, data: any): void {
 
 /**
  * Reads a sheet table, converting rows into an array of objects based on the header.
+ * FIX: Now opens the policy sheet by its hardcoded ID.
  */
 function readTable_(sheetName: string): { ok: boolean, rows: any[], error?: string } {
     try {
-        const ss = SpreadsheetApp.getActiveSpreadsheet();
-        const sh = ss.getSheetByName(sheetName);
+        // Use openById() to connect to the separate policy sheet
+        const ss: GoogleAppsScript.Spreadsheet.Spreadsheet = SpreadsheetApp.openById(GLOBAL_DB_ID);
+        const sh: GoogleAppsScript.Spreadsheet.Sheet | null = ss.getSheetByName(sheetName);
+        
         if (!sh) throw new Error("Sheet not found: " + sheetName);
         
         const vals = sh.getDataRange().getValues();
@@ -47,10 +55,6 @@ function readTable_(sheetName: string): { ok: boolean, rows: any[], error?: stri
         return { ok: false, error: (e as Error).message, rows: [] };
     }
 }
-
-// ... (Functions: getSettings_, callOpenAI_, getHandlerManifest_, nlpPickCommand_ remain similar)
-// Note: We skip repeating the full utility code blocks here, assuming the original code 
-// that depended on these helpers is preserved in the final composition.
 
 // === GUARDIAN AGENT (Policy Enforcement) ===
 
@@ -111,11 +115,9 @@ function Guardian_checkAccess(userEmail: string, handlerKey: string): {ok: boole
 }
 
 
-// === CORE ROUTER & EXECUTION ===
-
+// === CORE ROUTER & EXECUTION (STUBS) ===
 function nlpPickCommand_(text: string): any {
-    // STUB: Full AI routing logic here. We assume this returns {ok: true, handler: fnName, handlerKey: key}
-    // We will simulate the desired output for the 'help' test:
+    // STUB: This is a simplified version for local testing.
     if (text.toLowerCase() === 'help') {
         return { ok: true, handler: 'cmd_Help_', handlerKey: 'cmd_Help_' };
     }
@@ -125,36 +127,29 @@ function nlpPickCommand_(text: string): any {
     return { ok: false, reason: 'no-match' }; 
 }
 
-
-/**
- * Public entry point for the Polaris Client Project (Web App) via google.script.run.
- */
 function routeUserQuery(text: string): any {
     try {
         const userId: string = Session.getActiveUser().getEmail();
         
-        // 1. Route the query (Query 1)
         const routerResult: any = nlpPickCommand_(text);
         if (!routerResult.ok) {
             return `⚠️ Router Fail: ${routerResult.reason || 'Unknown routing error'}`;
         }
 
-        // 2. Policy Enforcement (THE GATE)
         const accessCheck: any = Guardian_checkAccess(userId, routerResult.handlerKey);
         if (!accessCheck.ok) {
             log_('WARN', 'routeUserQuery_AccessDenied', { userId: userId, key: routerResult.handlerKey });
-            return `⚠️ ${accessCheck.message}`; 
+            return `⚠️ ${accessCheck.message}`;
         }
         
-        // 3. Execution (Simulated for cmd_Help_)
         const handlerFn: string = routerResult.handler;
         
         if (handlerFn === 'cmd_Help_') {
             return cmd_Help_({});
         }
 
-        // 4. Resolve and execute (STUB)
-        return { ok: true, message: `Successfully routed to ${handlerFn}.` };
+        // Final Execution (Assumes function exists in project scope)
+        return globalThis[handlerFn]({text: text, userId: userId});
 
     } catch (e: unknown) {
         log_('FATAL', 'routeUserQuery_Exception', { err: (e as Error).message });
